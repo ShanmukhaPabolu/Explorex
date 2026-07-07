@@ -847,6 +847,24 @@ export function BookmarksPage() {
   const [activeTab, setActiveTab] = useState('blogs');
   const bookmarkedBlogs = mockBlogs.filter(b => b.isBookmarked);
 
+  // Local storage itineraries
+  const [savedItineraries, setSavedItineraries] = useState<any[]>(() => {
+    try {
+      const items = localStorage.getItem('explorex_saved_itineraries');
+      return items ? JSON.parse(items) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [selectedItinerary, setSelectedItinerary] = useState<any | null>(null);
+
+  const handleDeleteItinerary = (id: string) => {
+    const updated = savedItineraries.filter((item: any) => item.id !== id);
+    setSavedItineraries(updated);
+    localStorage.setItem('explorex_saved_itineraries', JSON.stringify(updated));
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -857,11 +875,12 @@ export function BookmarksPage() {
         <p className="text-slate-500">Your saved content in one place</p>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {[
           { id: 'blogs', label: 'Blogs', count: bookmarkedBlogs.length },
           { id: 'destinations', label: 'Destinations', count: 2 },
           { id: 'communities', label: 'Communities', count: 1 },
+          { id: 'itineraries', label: 'Itineraries', count: savedItineraries.length },
         ].map(tab => (
           <button
             key={tab.id}
@@ -893,6 +912,75 @@ export function BookmarksPage() {
       {activeTab === 'communities' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {mockCommunities.filter(c => c.isJoined).slice(0, 1).map(c => <CommunityCard key={c.id} community={c} />)}
+        </div>
+      )}
+
+      {activeTab === 'itineraries' && (
+        savedItineraries.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {savedItineraries.map((itinerary: any) => (
+              <div key={itinerary.id} className="card p-5 space-y-4 border border-slate-100 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-bold text-slate-900 text-base">{itinerary.destination}</h3>
+                    <button onClick={() => handleDeleteItinerary(itinerary.id)} className="text-slate-400 hover:text-red-500 transition-colors">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="flex gap-4 text-xs text-slate-500 mt-2">
+                    <span><strong>{itinerary.days}</strong> Days</span>
+                    <span>Budget: <strong className="text-emerald-600">${itinerary.budget}</strong></span>
+                  </div>
+                </div>
+                <div className="pt-3">
+                  <Button variant="secondary" size="sm" className="w-full" onClick={() => setSelectedItinerary(itinerary)}>
+                    View Itinerary
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState icon={<Brain />} title="No saved itineraries" description="Use the AI Travel Planner to generate a custom itinerary and save it!" action={<Link to="/ai-planner" className="btn-primary">Go to Planner</Link>} />
+        )
+      )}
+
+      {/* Itinerary Modal View */}
+      {selectedItinerary && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-y-auto p-6 md:p-8 space-y-6 relative shadow-2xl">
+            <div className="flex justify-between items-start">
+              <div>
+                <h2 className="text-xl md:text-2xl font-black text-slate-900">{selectedItinerary.destination}</h2>
+                <div className="flex gap-4 text-sm text-slate-500 mt-1">
+                  <span>{selectedItinerary.days} days</span>
+                  <span>Budget: <strong className="text-emerald-600">${selectedItinerary.budget}</strong></span>
+                </div>
+              </div>
+              <button onClick={() => setSelectedItinerary(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-500 hover:text-slate-900 text-lg font-bold">
+                ✕
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {selectedItinerary.itinerary.map((day: any) => (
+                <div key={day.day} className="p-4 bg-slate-50 rounded-2xl border border-slate-100/50">
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-bold text-slate-800 text-sm">Day {day.day}: {day.theme}</h4>
+                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">${day.cost}</span>
+                  </div>
+                  <div className="space-y-1">
+                    {day.activities.map((act: string, idx: number) => (
+                      <p key={idx} className="text-xs text-slate-600 flex gap-2">
+                        <span className="text-primary-400">•</span>
+                        {act}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -947,6 +1035,32 @@ export function AITravelPlannerPage() {
   const [form, setForm] = useState({ destination: '', days: '7', budget: '1500', style: 'balanced' });
   const [loading, setLoading] = useState(false);
   const [plan, setPlan] = useState<null | { destination: string; days: number; budget: number; itinerary: Array<{ day: number; theme: string; activities: string[]; cost: number }> }>(null);
+  const [saved, setSaved] = useState(false);
+  const [shared, setShared] = useState(false);
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const dest = searchParams.get('destination');
+    const days = searchParams.get('days');
+    const budget = searchParams.get('budget');
+    if (dest) {
+      const parsedDays = parseInt(days || '7');
+      const parsedBudget = parseInt(budget || '1500');
+      const itinerary = Array.from({ length: parsedDays }, (_, i) => ({
+        day: i + 1,
+        theme: ['Arrival & Orientation', 'Cultural Exploration', 'Nature & Adventure', 'Food & Markets', 'Hidden Gems', 'Relaxation', 'Departure'][i % 7],
+        activities: [
+          `Morning: Visit ${['local temple', 'famous landmark', 'historical museum', 'botanical garden'][i % 4]}`,
+          `Afternoon: ${['street food tour', 'guided city walk', 'local cooking class', 'boat trip'][i % 4]}`,
+          `Evening: ${['rooftop dinner', 'night market', 'cultural show', 'sunset viewpoint'][i % 4]}`,
+        ],
+        cost: Math.floor(parsedBudget / parsedDays * (0.8 + Math.random() * 0.4)),
+      }));
+
+      setPlan({ destination: dest, days: parsedDays, budget: parsedBudget, itinerary });
+      setForm({ destination: dest, days: String(parsedDays), budget: String(parsedBudget), style: 'balanced' });
+    }
+  }, [searchParams]);
 
   const handleGenerate = async () => {
     if (!form.destination) return;
@@ -966,6 +1080,37 @@ export function AITravelPlannerPage() {
 
     setPlan({ destination: form.destination, days: parseInt(form.days), budget: parseInt(form.budget), itinerary });
     setLoading(false);
+  };
+
+  const handleSave = () => {
+    if (!plan) return;
+    try {
+      const existing = localStorage.getItem('explorex_saved_itineraries');
+      const itineraries = existing ? JSON.parse(existing) : [];
+      
+      const newItinerary = {
+        id: `itinerary_${Date.now()}`,
+        destination: plan.destination,
+        days: plan.days,
+        budget: plan.budget,
+        itinerary: plan.itinerary
+      };
+
+      localStorage.setItem('explorex_saved_itineraries', JSON.stringify([...itineraries, newItinerary]));
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleShare = () => {
+    if (!plan) return;
+    const shareUrl = `${window.location.origin}/ai-planner?destination=${encodeURIComponent(plan.destination)}&days=${plan.days}&budget=${plan.budget}`;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setShared(true);
+      setTimeout(() => setShared(false), 2000);
+    });
   };
 
   return (
@@ -1074,8 +1219,21 @@ export function AITravelPlannerPage() {
           </div>
 
           <div className="flex gap-3">
-            <Button variant="primary" className="flex-1" icon={<BookOpen className="w-4 h-4" />}>Save Itinerary</Button>
-            <Button variant="secondary" icon={<Send className="w-4 h-4" />}>Share</Button>
+            <Button
+              variant="primary"
+              className="flex-1"
+              onClick={handleSave}
+              icon={<BookOpen className="w-4 h-4" />}
+            >
+              {saved ? '✓ Itinerary Saved!' : 'Save Itinerary'}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={handleShare}
+              icon={<Send className="w-4 h-4" />}
+            >
+              {shared ? '✓ Link Copied!' : 'Share'}
+            </Button>
           </div>
         </div>
       )}
