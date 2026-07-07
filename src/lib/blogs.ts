@@ -199,5 +199,7 @@ export async function deleteBlog(id: string): Promise<{ ok: boolean; error?: str
 
 /** Increment view count */
 export async function incrementViews(blogId: string) {
-  await supabase.rpc('increment_views', { blog_id: blogId }).catch(() => {});
+  try {
+    await supabase.rpc('increment_views', { blog_id: blogId });
+  } catch {}
 }

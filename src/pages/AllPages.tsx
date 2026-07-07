@@ -4,6 +4,7 @@ import { Search, MapPin, Star, Filter, Sparkles, Send, BarChart2, Eye, Heart, Us
 import { mockDestinations, mockCommunities, mockBlogs, mockUsers } from '../data/mockData';
 import DestinationCard from '../components/travel/DestinationCard';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { publishBlog, fetchMyBlogs, deleteBlog, updateBlog, fetchBlogBySlug, fetchBlogById } from '../lib/blogs';
 import CommunityCard from '../components/community/CommunityCard';
 import BlogCard from '../components/blog/BlogCard';

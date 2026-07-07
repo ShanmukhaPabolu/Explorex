@@ -39,7 +39,7 @@ export function Input({ label, error, icon, className, ...props }: InputProps) {
       <div className="relative">
         {icon && <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">{icon}</div>}
         <input
-          className={cn('input', icon && 'pl-10', error && 'border-red-400 focus:ring-red-400', className)}
+          className={cn('input', !!icon && 'pl-10', !!error && 'border-red-400 focus:ring-red-400', className)}
           {...props}
         />
       </div>
