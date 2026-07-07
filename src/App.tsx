@@ -10,6 +10,8 @@ import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/auth/LoginPage';
 import SignupPage from './pages/auth/SignupPage';
 import AuthCallbackPage from './pages/auth/AuthCallbackPage';
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import DashboardHome from './pages/dashboard/DashboardHome';
 import BlogsPage from './pages/blog/BlogsPage';
 import BlogDetailPage from './pages/blog/BlogDetailPage';
@@ -25,6 +27,9 @@ import {
   AITravelPlannerPage,
   LeaderboardPage,
   SettingsPage,
+  DestinationDetailPage,
+  SportsDetailPage,
+  CommunityDetailPage,
 } from './pages/AllPages';
 
 // Scroll to top on route change
@@ -72,7 +77,7 @@ function AppRoutes() {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
 
-  const authPages = ['/login', '/signup', '/forgot-password'];
+  const authPages = ['/login', '/signup', '/forgot-password', '/reset-password'];
   const isAuthPage = authPages.includes(location.pathname);
 
   return (
@@ -92,6 +97,8 @@ function AppRoutes() {
         {/* Auth pages */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
 
         {/* Protected dashboard routes */}
@@ -156,6 +163,16 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/travel/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <DestinationDetailPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/sports"
           element={
             <ProtectedRoute>
@@ -166,11 +183,31 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/sports/:id"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <SportsDetailPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/communities"
           element={
             <ProtectedRoute>
               <DashboardLayout>
                 <CommunitiesPage />
+              </DashboardLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/communities/:slug"
+          element={
+            <ProtectedRoute>
+              <DashboardLayout>
+                <CommunityDetailPage />
               </DashboardLayout>
             </ProtectedRoute>
           }

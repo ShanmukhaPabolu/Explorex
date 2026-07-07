@@ -1,24 +1,64 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Heart, MessageCircle, Bookmark, Share2, Clock, Eye, ArrowLeft, Send, Twitter, Linkedin, Copy } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Heart, MessageCircle, Bookmark, Share2, Clock, Eye, ArrowLeft, Send, Twitter, Linkedin, Copy, Compass, Trash2, Edit } from 'lucide-react';
 import { mockBlogs } from '../../data/mockData';
+import { fetchBlogBySlug, deleteBlog } from '../../lib/blogs';
 import { Avatar, Badge, Button } from '../../components/ui';
 import BlogCard from '../../components/blog/BlogCard';
 import { formatNumber, formatDate } from '../../utils';
+import type { Blog } from '../../types';
+import { useAuth } from '../../context/AuthContext';
 
 export default function BlogDetailPage() {
   const { slug } = useParams();
-  const blog = mockBlogs.find(b => b.slug === slug) || mockBlogs[0];
-  const related = mockBlogs.filter(b => b.id !== blog.id && (b.category === blog.category || b.tags.some(t => blog.tags.includes(t)))).slice(0, 3);
+  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const [blog, setBlog] = useState<Blog | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const [liked, setLiked] = useState(blog.isLiked);
-  const [likes, setLikes] = useState(blog.likes);
-  const [bookmarked, setBookmarked] = useState(blog.isBookmarked);
+  const [liked, setLiked] = useState(false);
+  const [likes, setLikes] = useState(0);
+  const [bookmarked, setBookmarked] = useState(false);
   const [comment, setComment] = useState('');
   const [comments, setComments] = useState([
     { id: '1', author: 'Sarah Chen', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop', text: 'Absolutely stunning photography and incredible storytelling! Adding this to my bucket list immediately! 🌟', time: '2 hours ago', likes: 24 },
     { id: '2', author: 'James Wright', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop', text: 'Great tips on the budget breakdown. Very helpful for planning similar trips. Did you use any travel apps?', time: '5 hours ago', likes: 18 },
   ]);
+
+  const handleDelete = async () => {
+    if (!blog) return;
+    if (!window.confirm('Are you sure you want to delete this blog post?')) return;
+    const res = await deleteBlog(blog.id);
+    if (res.ok) {
+      if (refreshUser) await refreshUser();
+      navigate('/blogs');
+    } else {
+      alert(res.error || 'Failed to delete blog.');
+    }
+  };
+
+  useEffect(() => {
+    if (!slug) return;
+    setLoading(true);
+
+    fetchBlogBySlug(slug)
+      .then(found => {
+        if (found) {
+          setBlog(found);
+          setLiked(found.isLiked ?? false);
+          setLikes(found.likes);
+          setBookmarked(found.isBookmarked ?? false);
+        } else {
+          // Fall back to mock data
+          const mock = mockBlogs.find(b => b.slug === slug) || mockBlogs[0];
+          setBlog(mock);
+          setLiked(mock.isLiked ?? false);
+          setLikes(mock.likes);
+          setBookmarked(mock.isBookmarked ?? false);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [slug]);
 
   const handleComment = () => {
     if (!comment.trim()) return;
@@ -32,6 +72,36 @@ export default function BlogDetailPage() {
     }, ...c]);
     setComment('');
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center animate-pulse">
+          <Compass className="w-6 h-6 text-primary-600" />
+        </div>
+        <svg className="w-6 h-6 animate-spin text-primary-400" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+      </div>
+    );
+  }
+
+  if (!blog) {
+    return (
+      <div className="text-center py-24">
+        <div className="text-6xl mb-4">🗺️</div>
+        <h1 className="text-2xl font-black text-slate-900 mb-2">Blog not found</h1>
+        <Link to="/blogs" className="text-primary-600 hover:underline">← Back to Blogs</Link>
+      </div>
+    );
+  }
+
+  const isAuthor = user && blog && user.id === blog.author.id;
+
+  const related = mockBlogs
+    .filter(b => b.id !== blog.id && (b.category === blog.category || b.tags.some(t => blog.tags.includes(t))))
+    .slice(0, 3);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -67,26 +137,47 @@ export default function BlogDetailPage() {
               <span className="flex items-center gap-1"><Clock className="w-4 h-4" />{blog.readTime} min read</span>
               <span className="flex items-center gap-1"><Eye className="w-4 h-4" />{formatNumber(blog.views)} views</span>
               <span>{formatDate(blog.publishedAt)}</span>
+              {isAuthor && (
+                <div className="flex items-center gap-2 border-l border-slate-200 pl-3">
+                  <button
+                    onClick={() => navigate(`/write?edit=${blog.id}`)}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-primary-600 hover:bg-slate-50 transition-all flex items-center gap-1"
+                    title="Edit Post"
+                  >
+                    <Edit className="w-4 h-4" />
+                    <span className="hidden sm:inline text-xs font-semibold">Edit</span>
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    className="p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-all flex items-center gap-1"
+                    title="Delete Post"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline text-xs font-semibold">Delete</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
 
         {/* Cover image */}
-        <img src={blog.coverImage} alt={blog.title} className="w-full h-72 md:h-96 object-cover rounded-2xl mb-8 shadow-lg" />
+        {blog.coverImage && (
+          <img
+            src={blog.coverImage}
+            alt={blog.title}
+            className="w-full h-72 md:h-96 object-cover rounded-2xl mb-8 shadow-lg"
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+        )}
 
         {/* Content */}
         <div className="prose prose-slate max-w-none mb-10 text-slate-700 leading-relaxed space-y-4">
           {blog.content.split('\n\n').map((para, i) => {
-            if (para.startsWith('## ')) {
-              return <h2 key={i} className="text-2xl font-black text-slate-900 mt-8 mb-4">{para.slice(3)}</h2>;
-            }
-            if (para.startsWith('# ')) {
-              return <h1 key={i} className="text-3xl font-black text-slate-900 mt-8 mb-4">{para.slice(2)}</h1>;
-            }
+            if (para.startsWith('## ')) return <h2 key={i} className="text-2xl font-black text-slate-900 mt-8 mb-4">{para.slice(3)}</h2>;
+            if (para.startsWith('# ')) return <h1 key={i} className="text-3xl font-black text-slate-900 mt-8 mb-4">{para.slice(2)}</h1>;
             return <p key={i} className="text-base">{para}</p>;
           })}
-          <p className="text-base">Whether you're a seasoned backpacker or planning your first international trip, Southeast Asia offers something magical for every kind of traveler. The key is getting off the beaten path and letting curiosity be your guide. Take local buses, eat where the locals eat, and don't be afraid to get lost — that's often when the best discoveries happen.</p>
-          <p className="text-base">The food alone is worth the trip: from steaming bowls of pho in Hanoi's Old Quarter to the chaotic night markets of Chiang Mai, every meal is an adventure. And when you combine these culinary experiences with the region's natural beauty — from limestone karst formations to pristine island beaches — you have all the ingredients for an unforgettable journey.</p>
         </div>
 
         {/* Author card */}
@@ -100,7 +191,7 @@ export default function BlogDetailPage() {
               </div>
               <Button variant="primary" size="sm">Follow</Button>
             </div>
-            <p className="text-slate-600 text-sm leading-relaxed">{blog.author.bio}</p>
+            <p className="text-slate-600 text-sm leading-relaxed">{blog.author.bio || 'Traveler & storyteller.'}</p>
           </div>
         </div>
 
@@ -128,7 +219,11 @@ export default function BlogDetailPage() {
             </div>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500 font-medium">Share:</span>
-              {[{ icon: Twitter, color: 'text-sky-500 hover:bg-sky-50' }, { icon: Linkedin, color: 'text-blue-600 hover:bg-blue-50' }, { icon: Copy, color: 'text-slate-500 hover:bg-slate-100' }].map(({ icon: Icon, color }, i) => (
+              {[
+                { icon: Twitter, color: 'text-sky-500 hover:bg-sky-50' },
+                { icon: Linkedin, color: 'text-blue-600 hover:bg-blue-50' },
+                { icon: Copy, color: 'text-slate-500 hover:bg-slate-100' },
+              ].map(({ icon: Icon, color }, i) => (
                 <button key={i} className={`p-2 rounded-xl transition-all ${color}`}><Icon className="w-4 h-4" /></button>
               ))}
             </div>
@@ -140,7 +235,6 @@ export default function BlogDetailPage() {
       <section className="mt-12">
         <h2 className="text-xl font-bold text-slate-900 mb-6">Comments ({comments.length})</h2>
 
-        {/* Comment input */}
         <div className="card p-4 mb-6">
           <div className="flex gap-3">
             <Avatar name="You" size="sm" />
@@ -153,15 +247,12 @@ export default function BlogDetailPage() {
                 className="w-full text-sm text-slate-700 placeholder-slate-400 resize-none focus:outline-none"
               />
               <div className="flex justify-end mt-2">
-                <Button size="sm" onClick={handleComment} icon={<Send className="w-3.5 h-3.5" />}>
-                  Comment
-                </Button>
+                <Button size="sm" onClick={handleComment} icon={<Send className="w-3.5 h-3.5" />}>Comment</Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Comment list */}
         <div className="space-y-4">
           {comments.map(c => (
             <div key={c.id} className="flex gap-3">

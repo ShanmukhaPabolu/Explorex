@@ -13,6 +13,11 @@ interface AuthContextType {
   loginWithGoogle: () => Promise<void>;
   loginWithGitHub: () => Promise<void>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
+  sendOtp: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  verifyOtp: (email: string, token: string) => Promise<{ ok: boolean; error?: string }>;
+  sendPasswordReset: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  resetPassword: (password: string) => Promise<{ ok: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -53,25 +58,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Start as true so we don't flash the login page on refresh
   const [loading, setLoading] = useState(true);
 
+  const loadUserWithBlogCount = useCallback(async (supaUser: Session['user'] | null) => {
+    if (!supaUser) {
+      setUser(null);
+      return;
+    }
+    const mapped = mapSupabaseUser(supaUser);
+    
+    // Fetch blog count from Supabase
+    const { count, error } = await supabase
+      .from('blogs')
+      .select('*', { count: 'exact', head: true })
+      .eq('author_id', supaUser.id);
+      
+    if (!error && count !== null) {
+      mapped.blogs = count;
+    }
+    setUser(mapped);
+  }, []);
+
+  const refreshUser = useCallback(async () => {
+    if (session?.user) {
+      await loadUserWithBlogCount(session.user);
+    }
+  }, [session, loadUserWithBlogCount]);
+
   useEffect(() => {
     // Restore session on mount
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (data.session) {
         setSession(data.session);
-        setUser(mapSupabaseUser(data.session.user));
+        await loadUserWithBlogCount(data.session.user);
       }
       setLoading(false);
     });
 
     // Listen for auth state changes (login, logout, token refresh)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
       setSession(newSession);
-      setUser(newSession ? mapSupabaseUser(newSession.user) : null);
+      if (newSession) {
+        await loadUserWithBlogCount(newSession.user);
+      } else {
+        setUser(null);
+      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [loadUserWithBlogCount]);
 
   const login = useCallback(async (email: string, password: string) => {
     setLoading(true);
@@ -115,6 +149,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await supabase.auth.signOut();
   }, []);
 
+  const sendOtp = useCallback(async (email: string) => {
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        shouldCreateUser: true,
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      }
+    });
+    setLoading(false);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  }, []);
+
+  const verifyOtp = useCallback(async (email: string, token: string) => {
+    setLoading(true);
+    const { error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: 'email',
+    });
+    setLoading(false);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  }, []);
+
+  const sendPasswordReset = useCallback(async (email: string) => {
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  }, []);
+
+  const resetPassword = useCallback(async (password: string) => {
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -127,6 +205,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         loginWithGoogle,
         loginWithGitHub,
         logout,
+        refreshUser,
+        sendOtp,
+        verifyOtp,
+        sendPasswordReset,
+        resetPassword,
       }}
     >
       {children}

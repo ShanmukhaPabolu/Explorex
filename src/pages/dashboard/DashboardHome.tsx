@@ -120,7 +120,7 @@ export default function DashboardHome() {
                     {c.icon}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900 truncate">{c.name}</p>
+                    <Link to={`/communities/${c.slug}`} className="text-sm font-semibold text-slate-900 hover:text-primary-600 transition-colors truncate block">{c.name}</Link>
                     <p className="text-xs text-slate-500">{formatNumber(c.members)} members</p>
                   </div>
                   <button className="text-xs font-semibold text-primary-600 hover:text-primary-700 whitespace-nowrap">Join</button>

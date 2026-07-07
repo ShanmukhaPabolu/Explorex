@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Search, MapPin, Star, Filter, Sparkles, Send, BarChart2, Eye, Heart, Users, BookOpen, Bookmark, TrendingUp, Trophy, Brain, PenSquare, Bold, Italic, List, Image as ImageIcon, Tag, Save, Globe } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Search, MapPin, Star, Filter, Sparkles, Send, BarChart2, Eye, Heart, Users, BookOpen, Bookmark, TrendingUp, Trophy, Brain, PenSquare, Bold, Italic, List, Image as ImageIcon, Tag, Save, Globe, Trash2, Edit, ArrowLeft, MessageSquare } from 'lucide-react';
 import { mockDestinations, mockCommunities, mockBlogs, mockUsers } from '../data/mockData';
 import DestinationCard from '../components/travel/DestinationCard';
+import { useAuth } from '../context/AuthContext';
+import { publishBlog, fetchMyBlogs, deleteBlog, updateBlog, fetchBlogBySlug, fetchBlogById } from '../lib/blogs';
 import CommunityCard from '../components/community/CommunityCard';
 import BlogCard from '../components/blog/BlogCard';
 import { Avatar, Button, Badge, Input, Select, EmptyState } from '../components/ui';
 import { formatNumber } from '../utils';
-import { useAuth } from '../context/AuthContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 
 // ─────────────────────────────────────
@@ -86,9 +87,53 @@ export function TravelPage() {
 // SPORTS PAGE
 // ─────────────────────────────────────
 const sportsNews = [
-  { title: 'Cricket World Cup 2024: India vs Australia Semi-Final Highlights', category: 'Cricket', time: '2h ago', image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=200&h=120&fit=crop', views: 45200 },
-  { title: 'Premier League GW20: Top 5 Goals of the Week', category: 'Football', time: '4h ago', image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=200&h=120&fit=crop', views: 32100 },
-  { title: 'NBA: LeBron James Scores Career-High in Overtime Thriller', category: 'Basketball', time: '6h ago', image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=200&h=120&fit=crop', views: 28700 },
+  {
+    id: '1',
+    title: 'Cricket World Cup 2024: India vs Australia Semi-Final Highlights',
+    category: 'Cricket',
+    time: '2h ago',
+    image: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=800&h=450&fit=crop',
+    views: 45200,
+    content: `What an absolute thriller of a match at the World Cup! India secured their place in the finals after a nail-biting encounter with Australia.
+
+India, batting first, put up a massive score of 287/4 in their 50 overs, led by an outstanding century from the skipper. Australia put up a stellar chase, matching the run rate but losing crucial wickets at key moments. The Indian spin attack turned the game in the middle overs, restricting Australia to 245/8.
+
+Key Performances:
+- Rohit Sharma: 104 runs (92 balls)
+- Mitchell Starc: 3/45 (10 overs)
+- Jasprit Bumrah: 4/38 (9.2 overs)`
+  },
+  {
+    id: '2',
+    title: 'Premier League GW20: Top 5 Goals of the Week',
+    category: 'Football',
+    time: '4h ago',
+    image: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&h=450&fit=crop',
+    views: 32100,
+    content: `Game Week 20 of the Premier League season delivered some of the most sensational goals of the year. Here is our breakdown of the top 5 finishes:
+
+1. **The Bicycle Kick**: A stunning overhead volley from 18 yards out that left the keeper completely motionless.
+2. **The Solo Run**: A brilliant counter-attack where the winger dribbled past three defenders before curling it into the top corner.
+3. **The Long-Range Screamer**: A 35-yard half-volley that rocketed off the crossbar and in.
+4. **The Team Play**: A 15-pass buildup culminating in a simple tap-in.
+5. **The Free Kick**: A curling set-piece that went around the wall and into the bottom corner.`
+  },
+  {
+    id: '3',
+    title: 'NBA: LeBron James Scores Career-High in Overtime Thriller',
+    category: 'Basketball',
+    time: '6h ago',
+    image: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&h=450&fit=crop',
+    views: 28700,
+    content: `LeBron James put on a historic performance in an overtime thriller against the Warriors, scoring a season-high to carry his team to victory.
+
+At 39 years old, LeBron continues to defy time and gravity, scoring 12 of his team's 14 points in the overtime period to seal the game. The game was a back-and-forth masterpiece with multiple lead changes in the fourth quarter.
+
+Stats of the Match:
+- Points: 46
+- Rebounds: 11
+- Assists: 9`
+  }
 ];
 
 const liveScores = [
@@ -99,6 +144,33 @@ const liveScores = [
 
 export function SportsPage() {
   const [activeLeague, setActiveLeague] = useState('All');
+  const [newsList, setNewsList] = useState<any[]>(sportsNews);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.espn.com%2Fespn%2Frss%2Fnews')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.items && data.items.length > 0) {
+          const formatted = data.items.map((item: any, idx: number) => ({
+            id: item.guid || String(idx + 4),
+            title: item.title,
+            category: item.categories?.[0] || 'Sports',
+            time: new Date(item.pubDate).toLocaleDateString() || 'Recently',
+            image: item.thumbnail || 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&h=450&fit=crop',
+            views: Math.floor(Math.random() * 40000) + 5000,
+            content: item.content || item.description || 'No additional details available.',
+            link: item.link
+          }));
+          setNewsList(formatted);
+        }
+      })
+      .catch(() => {
+        setNewsList(sportsNews);
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   return (
     <div className="space-y-8">
@@ -145,24 +217,33 @@ export function SportsPage() {
       {/* Latest News */}
       <div>
         <h2 className="text-lg font-bold text-slate-900 mb-4">Latest Sports News</h2>
-        <div className="space-y-4">
-          {sportsNews.map((news, i) => (
-            <div key={i} className="card p-4 flex gap-4 hover:border-primary-200 border border-slate-100 cursor-pointer transition-all">
-              <img src={news.image} alt={news.title} className="w-24 h-20 rounded-xl object-cover flex-shrink-0" />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="blue">{news.category}</Badge>
-                  <span className="text-xs text-slate-400">{news.time}</span>
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <svg className="w-6 h-6 animate-spin text-primary-500" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+            </svg>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {newsList.map((news, i) => (
+              <Link to={`/sports/${news.id}`} key={i} className="card p-4 flex gap-4 hover:border-primary-200 border border-slate-100 block transition-all group">
+                <img src={news.image} alt={news.title} className="w-24 h-20 rounded-xl object-cover flex-shrink-0" />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="blue">{news.category}</Badge>
+                    <span className="text-xs text-slate-400">{news.time}</span>
+                  </div>
+                  <h3 className="font-semibold text-slate-900 text-sm mb-2 line-clamp-2 group-hover:text-primary-600 transition-colors">{news.title}</h3>
+                  <div className="flex items-center gap-1 text-xs text-slate-400">
+                    <Eye className="w-3 h-3" />
+                    {formatNumber(news.views)} views
+                  </div>
                 </div>
-                <h3 className="font-semibold text-slate-900 text-sm mb-2 line-clamp-2">{news.title}</h3>
-                <div className="flex items-center gap-1 text-xs text-slate-400">
-                  <Eye className="w-3 h-3" />
-                  {formatNumber(news.views)} views
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Communities */}
@@ -201,29 +282,69 @@ export function CommunitiesPage() {
 // PROFILE PAGE
 // ─────────────────────────────────────
 export function ProfilePage() {
-  const { user } = useAuth();
-  const profile = mockUsers[0];
+  const { user, refreshUser } = useAuth();
+  const { username } = useParams();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('blogs');
+  const [myBlogs, setMyBlogs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const isOwnProfile = !username || username === user?.username;
+  const profile = isOwnProfile
+    ? user
+    : (mockUsers.find(u => u.username === username) || mockUsers[0]);
+
+  useEffect(() => {
+    if (isOwnProfile && user) {
+      setLoading(true);
+      fetchMyBlogs(user.id)
+        .then(blogs => setMyBlogs(blogs))
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, [isOwnProfile, user, username]);
+
+  const handleDeleteBlog = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this blog post?')) return;
+    const res = await deleteBlog(id);
+    if (res.ok) {
+      setMyBlogs(prev => prev.filter(b => b.id !== id));
+      if (refreshUser) await refreshUser();
+    } else {
+      alert(res.error || 'Failed to delete blog.');
+    }
+  };
+
+  if (!profile) {
+    return (
+      <div className="text-center py-16">
+        <p className="text-slate-500">Please log in to view your profile.</p>
+      </div>
+    );
+  }
+
+  const coverUrl = profile.coverImage || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&h=400&fit=crop';
 
   return (
     <div>
       {/* Cover */}
       <div className="relative rounded-2xl overflow-hidden h-44 mb-0">
-        <img src={profile.coverImage} alt="Cover" className="w-full h-full object-cover" />
+        <img src={coverUrl} alt="Cover" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
       </div>
 
       {/* Profile header */}
-      <div className="card -mt-8 mx-0 p-6 mb-6">
+      <div className="card -mt-8 mx-0 p-6 mb-6 relative z-10">
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
           <Avatar src={profile.avatar} name={profile.name} size="2xl" className="-mt-16 ring-4 ring-white" />
           <div className="flex-1">
             <div className="flex items-center gap-3 flex-wrap mb-1">
               <h1 className="text-2xl font-black text-slate-900">{profile.name}</h1>
-              {profile.badges.map(b => <span key={b.id} title={b.name} className="text-xl">{b.icon}</span>)}
+              {profile.badges?.map(b => <span key={b.id} title={b.name} className="text-xl">{b.icon}</span>)}
             </div>
-            <p className="text-slate-500">@{profile.username} · {profile.location}</p>
-            <p className="text-slate-700 text-sm mt-2 max-w-lg">{profile.bio}</p>
+            <p className="text-slate-500">@{profile.username} {profile.location && `· ${profile.location}`}</p>
+            <p className="text-slate-700 text-sm mt-2 max-w-lg">{profile.bio || 'No bio yet.'}</p>
           </div>
           <div className="flex gap-3">
             <Button variant="secondary">Message</Button>
@@ -234,10 +355,10 @@ export function ProfilePage() {
         {/* Stats */}
         <div className="flex gap-8 mt-6 pt-6 border-t border-slate-100">
           {[
-            { label: 'Followers', value: formatNumber(profile.followers) },
-            { label: 'Following', value: formatNumber(profile.following) },
-            { label: 'Blogs', value: profile.blogs },
-            { label: 'XP', value: formatNumber(profile.xp) },
+            { label: 'Followers', value: formatNumber(profile.followers || 0) },
+            { label: 'Following', value: formatNumber(profile.following || 0) },
+            { label: 'Blogs', value: profile.blogs || 0 },
+            { label: 'XP', value: formatNumber(profile.xp || 0) },
           ].map(s => (
             <div key={s.label} className="text-center">
               <div className="text-xl font-black text-slate-900">{s.value}</div>
@@ -267,9 +388,58 @@ export function ProfilePage() {
 
       {/* Tab content */}
       {activeTab === 'blogs' && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockBlogs.filter(b => b.author.username === profile.username).map(b => <BlogCard key={b.id} blog={b} />)}
-          {mockBlogs.slice(0, 2).map(b => <BlogCard key={b.id + '-x'} blog={b} />)}
+        <div>
+          {loading && (
+            <div className="flex justify-center py-8">
+              <svg className="w-6 h-6 animate-spin text-primary-500" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+              </svg>
+            </div>
+          )}
+          {isOwnProfile && myBlogs.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {myBlogs.map(b => (
+                <div key={b.id} className="relative group">
+                  <BlogCard blog={b} />
+                  {/* Owner Controls */}
+                  <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-sm p-1.5 rounded-xl shadow-md z-10">
+                    <button
+                      onClick={() => navigate(`/write?edit=${b.id}`)}
+                      className="p-2 rounded-lg text-slate-600 hover:text-primary-600 hover:bg-primary-50 transition-colors"
+                      title="Edit Blog"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBlog(b.id)}
+                      className="p-2 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors"
+                      title="Delete Blog"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          {isOwnProfile && myBlogs.length === 0 && !loading && (
+            <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 p-8">
+              <div className="text-4xl mb-3">✍️</div>
+              <h3 className="font-bold text-slate-800 mb-1">No blogs written yet</h3>
+              <p className="text-slate-400 text-sm mb-4">Share your travel and sports stories with the world.</p>
+              <Link to="/write" className="inline-block px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-xl text-sm font-semibold transition-colors">
+                Write a Blog
+              </Link>
+            </div>
+          )}
+          {!isOwnProfile && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {mockBlogs.filter(b => b.author.username === profile.username).map(b => (
+                <BlogCard key={b.id} blog={b} />
+              ))}
+            </div>
+          )}
         </div>
       )}
       {activeTab === 'bookmarks' && (
@@ -290,19 +460,148 @@ export function ProfilePage() {
 // WRITE PAGE
 // ─────────────────────────────────────
 export function WritePage() {
+  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
+
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [category, setCategory] = useState('travel');
   const [tags, setTags] = useState('');
+  const [coverImage, setCoverImage] = useState('');
   const [saved, setSaved] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState(false);
+  const [error, setError] = useState('');
+  const [loadingEdit, setLoadingEdit] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load blog details if editing
+  useEffect(() => {
+    if (editId) {
+      setLoadingEdit(true);
+      fetchBlogById(editId)
+        .then(blog => {
+          if (blog) {
+            setTitle(blog.title);
+            setContent(blog.content);
+            setCategory(blog.category.toLowerCase());
+            setTags(blog.tags.join(', '));
+            setCoverImage(blog.coverImage);
+          }
+        })
+        .finally(() => setLoadingEdit(false));
+    }
+  }, [editId]);
 
   const handleSave = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
 
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    setCoverImage(url);
+  };
+
+  const handlePublish = async () => {
+    setError('');
+    if (!user) { setError('You must be logged in to publish.'); return; }
+    if (!title.trim()) { setError('Please add a title before publishing.'); return; }
+    if (!content.trim() || content.trim().split(/\s+/).length < 10) {
+      setError('Please write at least a few sentences before publishing.');
+      return;
+    }
+    setPublishing(true);
+    
+    let result;
+    if (editId) {
+      result = await updateBlog(editId, {
+        title,
+        content,
+        category,
+        tags,
+        coverImage,
+      });
+    } else {
+      result = await publishBlog({
+        title,
+        content,
+        category,
+        tags,
+        coverImage,
+        authorId: user.id,
+        authorName: user.name,
+        authorUsername: user.username,
+        authorAvatar: user.avatar,
+      });
+    }
+
+    setPublishing(false);
+    if (!result.ok) {
+      setError(result.error ?? 'Failed to save. Please try again.');
+      return;
+    }
+    await refreshUser();
+    setPublished(true);
+    
+    if (!editId && (result as any).slug) {
+      setTimeout(() => navigate(`/blog/${(result as any).slug}`), 1500);
+    } else if (editId) {
+      setTimeout(() => navigate('/profile'), 1500);
+    }
+  };
+
+  if (loadingEdit) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+        <svg className="w-8 h-8 animate-spin text-primary-500" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+        <p className="text-slate-500 font-medium">Loading blog content…</p>
+      </div>
+    );
+  }
+
+  if (published) {
+    return (
+      <div className="max-w-4xl mx-auto flex flex-col items-center justify-center min-h-[60vh] text-center gap-6">
+        <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center text-4xl">🎉</div>
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 mb-2">
+            {editId ? 'Changes Saved!' : 'Blog Published!'}
+          </h2>
+          <p className="text-slate-500">
+            {editId ? 'Your updates are now live.' : 'Your story is now live for the world to read.'}
+          </p>
+        </div>
+        <div className="flex gap-3">
+          <Button variant="gradient" onClick={() => { setPublished(false); setTitle(''); setContent(''); setCoverImage(''); setTags(''); }}>
+            Write Another
+          </Button>
+          <Button variant="secondary" onClick={() => window.location.href = '/blogs'}>
+            View All Blogs
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
+      {/* Hidden file input for cover image upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleUpload}
+      />
+
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-black text-slate-900 flex items-center gap-2">
           <PenSquare className="w-6 h-6 text-primary-600" />
@@ -312,9 +611,23 @@ export function WritePage() {
           <Button variant="secondary" size="sm" onClick={handleSave} icon={<Save className="w-4 h-4" />}>
             {saved ? '✓ Saved' : 'Save Draft'}
           </Button>
-          <Button variant="gradient" size="sm" icon={<Globe className="w-4 h-4" />}>Publish</Button>
+          <Button
+            variant="gradient"
+            size="sm"
+            icon={<Globe className="w-4 h-4" />}
+            onClick={handlePublish}
+            loading={publishing}
+          >
+            Publish
+          </Button>
         </div>
       </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+          {error}
+        </div>
+      )}
 
       <div className="card p-6 space-y-6">
         {/* Title */}
@@ -378,11 +691,32 @@ export function WritePage() {
         </div>
 
         <div className="mt-4">
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">Cover Image URL</label>
+          <label className="block text-sm font-medium text-slate-700 mb-1.5">Cover Image</label>
           <div className="flex gap-2">
-            <input type="text" placeholder="https://images.unsplash.com/..." className="input flex-1" />
-            <Button variant="secondary" size="md" icon={<ImageIcon className="w-4 h-4" />}>Upload</Button>
+            <input
+              type="text"
+              placeholder="https://images.unsplash.com/..."
+              className="input flex-1"
+              value={coverImage}
+              onChange={e => setCoverImage(e.target.value)}
+            />
+            <Button
+              variant="secondary"
+              size="md"
+              icon={<ImageIcon className="w-4 h-4" />}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Upload
+            </Button>
           </div>
+          {coverImage && (
+            <img
+              src={coverImage}
+              alt="Cover preview"
+              className="mt-3 w-full h-48 object-cover rounded-xl border border-slate-200"
+              onError={() => setCoverImage('')}
+            />
+          )}
         </div>
       </div>
     </div>
@@ -832,9 +1166,77 @@ export function SettingsPage() {
   const [activeSection, setActiveSection] = useState('profile');
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
+  // Profile Form States
+  const [fullName, setFullName] = useState(user?.name || '');
+  const [usernameInput, setUsernameInput] = useState(user?.username || '');
+  const [locationInput, setLocationInput] = useState(user?.location || '');
+  const [bioInput, setBioInput] = useState(user?.bio || '');
+
+  // Account Form States
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [accountError, setAccountError] = useState('');
+  const [accountSuccess, setAccountSuccess] = useState('');
+  const [updatingAccount, setUpdatingAccount] = useState(false);
+
+  // Notification Preferences State
+  const [notifications, setNotifications] = useState<Record<string, boolean>>({
+    likes: true,
+    comments: true,
+    followers: true,
+    communities: true,
+    digest: false,
+  });
+
+  // Privacy Preferences State
+  const [privacy, setPrivacy] = useState<Record<string, boolean>>({
+    publicProfile: true,
+    showActive: true,
+    allowIndexing: false,
+    analyticsSharing: true,
+  });
+
+  const handleSaveProfile = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAccountError('');
+    setAccountSuccess('');
+    if (!newPassword || !confirmPassword) {
+      setAccountError('Please fill in both password fields.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setAccountError('Passwords do not match.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setAccountError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setUpdatingAccount(true);
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setUpdatingAccount(false);
+
+    if (error) {
+      setAccountError(error.message);
+    } else {
+      setAccountSuccess('Password successfully updated!');
+      setNewPassword('');
+      setConfirmPassword('');
+    }
+  };
+
+  const toggleNotification = (key: string) => {
+    setNotifications(prev => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const togglePrivacy = (key: string) => {
+    setPrivacy(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const sections = [
@@ -864,57 +1266,592 @@ export function SettingsPage() {
         <div className="card p-6 space-y-6">
           <h2 className="font-bold text-slate-900 text-lg">Profile Information</h2>
           <div className="flex items-center gap-4">
-            <Avatar src={user?.avatar} name={user?.name} size="xl" />
+            <Avatar src={user?.avatar} name={fullName} size="xl" />
             <Button variant="secondary" size="sm">Change Photo</Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input label="Full Name" defaultValue={user?.name} />
-            <Input label="Username" defaultValue={user?.username} />
-            <Input label="Email" type="email" defaultValue={user?.email} />
-            <Input label="Location" defaultValue={user?.location || ''} icon={<MapPin className="w-4 h-4" />} />
+            <Input label="Full Name" value={fullName} onChange={e => setFullName(e.target.value)} />
+            <Input label="Username" value={usernameInput} onChange={e => setUsernameInput(e.target.value)} />
+            <Input label="Email" type="email" defaultValue={user?.email} disabled />
+            <Input label="Location" value={locationInput} onChange={e => setLocationInput(e.target.value)} icon={<MapPin className="w-4 h-4" />} />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Bio</label>
-            <textarea rows={4} defaultValue={user?.bio || ''} className="input resize-none" />
+            <textarea rows={4} value={bioInput} onChange={e => setBioInput(e.target.value)} className="input resize-none" />
           </div>
           <div className="flex justify-end">
-            <Button variant="primary" onClick={handleSave}>{saved ? '✓ Saved!' : 'Save Changes'}</Button>
+            <Button variant="primary" onClick={handleSaveProfile}>{saved ? '✓ Saved!' : 'Save Changes'}</Button>
+          </div>
+        </div>
+      )}
+
+      {activeSection === 'account' && (
+        <div className="card p-6 space-y-6">
+          <h2 className="font-bold text-slate-900 text-lg">Account Security</h2>
+          
+          <form onSubmit={handleUpdatePassword} className="space-y-4">
+            <h3 className="font-semibold text-slate-800 text-sm">Update Password</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="New Password"
+                type="password"
+                placeholder="At least 6 characters"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+              />
+              <Input
+                label="Confirm Password"
+                type="password"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+              />
+            </div>
+
+            {accountError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                {accountError}
+              </div>
+            )}
+
+            {accountSuccess && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
+                {accountSuccess}
+              </div>
+            )}
+
+            <div className="flex justify-end pt-2">
+              <Button type="submit" variant="primary" loading={updatingAccount}>
+                Update Password
+              </Button>
+            </div>
+          </form>
+
+          <hr className="border-slate-100" />
+
+          <div className="space-y-3">
+            <h3 className="font-semibold text-red-600 text-sm">Danger Zone</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Once you delete your account, all of your blogs, comments, and profile data will be permanently deleted from our servers. This action is irreversible.
+            </p>
+            <Button variant="secondary" className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300">
+              Delete Account
+            </Button>
           </div>
         </div>
       )}
 
       {activeSection === 'notifications' && (
         <div className="card p-6 space-y-4">
-          <h2 className="font-bold text-slate-900 text-lg">Notification Preferences</h2>
+          <h2 className="font-bold text-slate-900 text-lg mb-2">Notification Preferences</h2>
           {[
-            { label: 'Someone likes your blog', desc: 'Get notified when your content is liked' },
-            { label: 'New comment on your blog', desc: 'Get notified about new comments' },
-            { label: 'New follower', desc: 'Get notified when someone follows you' },
-            { label: 'Community updates', desc: 'Get updates from communities you joined' },
-            { label: 'Weekly digest', desc: 'Receive a weekly summary of your performance' },
-          ].map((item, i) => (
-            <div key={i} className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
+            { id: 'likes', label: 'Someone likes your blog', desc: 'Get notified when your content is liked' },
+            { id: 'comments', label: 'New comment on your blog', desc: 'Get notified about new comments' },
+            { id: 'followers', label: 'New follower', desc: 'Get notified when someone follows you' },
+            { id: 'communities', label: 'Community updates', desc: 'Get updates from communities you joined' },
+            { id: 'digest', label: 'Weekly digest', desc: 'Receive a weekly summary of your performance' },
+          ].map((item) => (
+            <div key={item.id} className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
               <div>
                 <p className="text-sm font-medium text-slate-900">{item.label}</p>
                 <p className="text-xs text-slate-500">{item.desc}</p>
               </div>
-              <button className="relative w-11 h-6 rounded-full transition-all bg-primary-600">
-                <span className="absolute top-0.5 right-0.5 w-5 h-5 bg-white rounded-full shadow-sm" />
+              <button
+                type="button"
+                onClick={() => toggleNotification(item.id)}
+                className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                  notifications[item.id] ? 'bg-primary-600' : 'bg-slate-300'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                    notifications[item.id] ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
               </button>
             </div>
           ))}
         </div>
       )}
 
-      {(activeSection === 'account' || activeSection === 'privacy') && (
-        <div className="card p-6">
-          <EmptyState
-            icon={activeSection === 'account' ? '🔐' : '🛡️'}
-            title={activeSection === 'account' ? 'Account Settings' : 'Privacy Settings'}
-            description="This section is under development. Check back soon!"
-          />
+      {activeSection === 'privacy' && (
+        <div className="card p-6 space-y-4">
+          <h2 className="font-bold text-slate-900 text-lg mb-2">Privacy & Visibility</h2>
+          {[
+            { id: 'publicProfile', label: 'Public Profile Visibility', desc: 'Allow anyone to view your profile and browse your published blogs.' },
+            { id: 'showActive', label: 'Show Online Status', desc: 'Allow members of your communities to see when you are online.' },
+            { id: 'allowIndexing', label: 'Search Engine Indexing', desc: 'Allow Google and other search engines to index your profile and posts.' },
+            { id: 'analyticsSharing', label: 'Creator Research Analytics', desc: 'Share anonymous performance metadata to help improve creator services.' },
+          ].map((item) => (
+            <div key={item.id} className="flex items-center justify-between py-3 border-b border-slate-100 last:border-0">
+              <div className="pr-4">
+                <p className="text-sm font-medium text-slate-900">{item.label}</p>
+                <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => togglePrivacy(item.id)}
+                className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
+                  privacy[item.id] ? 'bg-primary-600' : 'bg-slate-300'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${
+                    privacy[item.id] ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          ))}
         </div>
       )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────
+// DESTINATION DETAIL PAGE
+// ─────────────────────────────────────
+export function DestinationDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const destination = mockDestinations.find(d => d.id === id);
+
+  if (!destination) {
+    return (
+      <div className="text-center py-24">
+        <div className="text-6xl mb-4">🗺️</div>
+        <h1 className="text-2xl font-black text-slate-900 mb-2">Destination not found</h1>
+        <Link to="/travel" className="text-primary-600 hover:underline">← Back to Travel</Link>
+      </div>
+    );
+  }
+
+  // Find blogs related to this destination
+  const relatedBlogs = mockBlogs.filter(b => 
+    b.title.toLowerCase().includes(destination.name.toLowerCase()) ||
+    (b.category.toLowerCase().includes('travel') && b.tags.some(t => t.toLowerCase() === destination.name.toLowerCase()))
+  );
+
+  return (
+    <div className="space-y-8">
+      {/* Back button */}
+      <button onClick={() => navigate('/travel')} className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors">
+        <ArrowLeft className="w-4 h-4" />
+        Back to Explore
+      </button>
+
+      {/* Hero Banner */}
+      <div className="relative rounded-3xl overflow-hidden h-96 shadow-lg">
+        <img src={destination.image} alt={destination.name} className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+          <div>
+            <div className="flex flex-wrap gap-2 mb-3">
+              <Badge variant="blue">{destination.continent}</Badge>
+              <Badge variant="cyan" className="capitalize">{destination.budget}</Badge>
+            </div>
+            <h1 className="text-3xl md:text-5xl font-black text-white leading-tight mb-2">{destination.name}</h1>
+            <div className="flex items-center gap-2 text-white/80">
+              <MapPin className="w-4 h-4 text-primary-400" />
+              <span>{destination.country}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md rounded-2xl p-4 ring-1 ring-white/30">
+            <div className="text-center">
+              <div className="flex items-center gap-1 text-amber-300 font-black text-lg justify-center">
+                <Star className="w-5 h-5 fill-current" />
+                <span>{destination.rating}</span>
+              </div>
+              <div className="text-xs text-white/80 font-medium">{formatNumber(destination.reviewCount)} reviews</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Details Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left main info */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="card p-6 md:p-8 space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900 mb-3">About {destination.name}</h2>
+              <p className="text-slate-600 leading-relaxed text-base">{destination.description}</p>
+            </div>
+
+            <hr className="border-slate-100" />
+
+            <div>
+              <h3 className="font-bold text-slate-900 mb-3">Quick Facts</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div className="bg-slate-50 p-4 rounded-2xl">
+                  <div className="text-xs text-slate-400 font-medium mb-1">Best Time to Visit</div>
+                  <div className="text-sm font-bold text-slate-800">{destination.bestTime}</div>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl">
+                  <div className="text-xs text-slate-400 font-medium mb-1">Budget Category</div>
+                  <div className="text-sm font-bold text-slate-800 capitalize">{destination.budget}</div>
+                </div>
+                <div className="bg-slate-50 p-4 rounded-2xl">
+                  <div className="text-xs text-slate-400 font-medium mb-1">Region</div>
+                  <div className="text-sm font-bold text-slate-800">{destination.continent}</div>
+                </div>
+              </div>
+            </div>
+
+            <hr className="border-slate-100" />
+
+            <div>
+              <h3 className="font-bold text-slate-900 mb-3">Popular Tags</h3>
+              <div className="flex flex-wrap gap-2">
+                {destination.tags.map(t => (
+                  <span key={t} className="text-sm bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full font-medium hover:bg-primary-50 hover:text-primary-600 transition-colors cursor-pointer">
+                    #{t}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* AI travel planner hook */}
+          <div className="bg-gradient-to-r from-primary-600 to-secondary-600 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden shadow-lg">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-1/4 translate-x-1/4" />
+            <div className="relative z-10 space-y-4 max-w-lg">
+              <Badge variant="cyan" className="bg-white/20 text-white border-none">✨ AI Powered</Badge>
+              <h3 className="text-2xl font-black">Plan your trip to {destination.name} in seconds</h3>
+              <p className="text-white/80 text-sm leading-relaxed">Get a personalized daily itinerary including restaurants, transport, attractions, and hotels customized to your travel budget.</p>
+              <Link to="/ai-planner" className="inline-flex items-center gap-2 px-5 py-3 bg-white text-primary-700 font-bold rounded-xl text-sm hover:shadow-lg transition-all">
+                <Sparkles className="w-4 h-4" /> Start Planning Now
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Right sidebar - Travel blogs about this destination */}
+        <div className="space-y-6">
+          <div className="card p-6">
+            <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-primary-600" />
+              Related Stories
+            </h3>
+            {relatedBlogs.length > 0 ? (
+              <div className="space-y-4">
+                {relatedBlogs.map(b => (
+                  <BlogCard key={b.id} blog={b} variant="compact" />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-xs text-slate-400">No blog posts about {destination.name} yet.</p>
+                <Link to="/write" className="mt-3 inline-block text-xs text-primary-600 font-semibold hover:underline">
+                  Be the first to write!
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────
+// SPORTS DETAIL PAGE
+// ─────────────────────────────────────
+export function SportsDetailPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [article, setArticle] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // 1. Check local mock data first
+    const mock = sportsNews.find(n => n.id === id);
+    if (mock) {
+      setArticle(mock);
+      setLoading(false);
+      return;
+    }
+
+    // 2. Fetch live data
+    setLoading(true);
+    fetch('https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.espn.com%2Fespn%2Frss%2Fnews')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.items) {
+          const found = data.items.find((item: any) => item.guid === id);
+          if (found) {
+            setArticle({
+              id: found.guid,
+              title: found.title,
+              category: found.categories?.[0] || 'Sports',
+              time: new Date(found.pubDate).toLocaleDateString() || 'Recently',
+              image: found.thumbnail || 'https://images.unsplash.com/photo-1461896836934-ffe607ba8211?w=800&h=450&fit=crop',
+              views: Math.floor(Math.random() * 40000) + 5000,
+              content: found.content || found.description || 'No additional details available.',
+              link: found.link
+            });
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-24">
+        <svg className="w-8 h-8 animate-spin text-primary-500" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+        </svg>
+      </div>
+    );
+  }
+
+  if (!article) {
+    return (
+      <div className="text-center py-24">
+        <div className="text-6xl mb-4">⚽</div>
+        <h1 className="text-2xl font-black text-slate-900 mb-2">Article not found</h1>
+        <Link to="/sports" className="text-primary-600 hover:underline">← Back to Sports Hub</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8">
+      {/* Back button */}
+      <button onClick={() => navigate('/sports')} className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors">
+        <ArrowLeft className="w-4 h-4" />
+        Back to Sports Hub
+      </button>
+
+      {/* Article container */}
+      <article className="space-y-6">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Badge variant="blue">{article.category}</Badge>
+            <span className="text-xs text-slate-400">{article.time}</span>
+          </div>
+          <h1 className="text-2xl md:text-4xl font-black text-slate-900 leading-tight">{article.title}</h1>
+          <div className="flex items-center gap-4 text-xs text-slate-400 pb-4 border-b border-slate-100">
+            <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {formatNumber(article.views)} views</span>
+          </div>
+        </div>
+
+        {/* Banner image */}
+        {article.image && (
+          <div className="rounded-3xl overflow-hidden shadow-lg h-72 md:h-[400px]">
+            <img src={article.image} alt={article.title} className="w-full h-full object-cover" />
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="prose prose-slate max-w-none text-slate-750 leading-relaxed text-sm bg-white p-6 rounded-2xl border border-slate-100">
+          <p className="whitespace-pre-line leading-relaxed mb-6">{article.content}</p>
+          {article.link && (
+            <a
+              href={article.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-bold rounded-xl text-xs transition-colors"
+            >
+              Read full coverage on ESPN ➔
+            </a>
+          )}
+        </div>
+      </article>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────
+// COMMUNITY DETAIL PAGE
+// ─────────────────────────────────────
+export function CommunityDetailPage() {
+  const { slug } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const community = mockCommunities.find(c => c.slug === slug);
+
+  const [joined, setJoined] = useState(community?.isJoined || false);
+  const [newPostText, setNewPostText] = useState('');
+  const [posts, setPosts] = useState([
+    {
+      id: 1,
+      author: {
+        name: 'Sarah Chen',
+        username: 'sarahchen',
+        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop'
+      },
+      content: 'Hey everyone! Planning a backpacking trip across Southeast Asia next month. What are the absolute must-visit islands in Thailand that are less crowded? 🌴',
+      likes: 12,
+      comments: 4,
+      time: '2 hours ago'
+    },
+    {
+      id: 2,
+      author: {
+        name: 'James Wright',
+        username: 'jameswright',
+        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop'
+      },
+      content: 'Just returned from Kyoto! If anyone is going soon, definitely check out the early morning bamboo grove walk at Arashiyama (around 6:30 AM). It is completely empty and magical.',
+      likes: 24,
+      comments: 9,
+      time: '5 hours ago'
+    }
+  ]);
+
+  if (!community) {
+    return (
+      <div className="text-center py-24">
+        <div className="text-6xl mb-4">👥</div>
+        <h1 className="text-2xl font-black text-slate-900 mb-2">Community not found</h1>
+        <Link to="/communities" className="text-primary-600 hover:underline">← Back to Communities</Link>
+      </div>
+    );
+  }
+
+  const handleCreatePost = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPostText.trim()) return;
+
+    const newPost = {
+      id: Date.now(),
+      author: {
+        name: user?.name || 'You',
+        username: user?.username || 'explorer',
+        avatar: user?.avatar || ''
+      },
+      content: newPostText,
+      likes: 0,
+      comments: 0,
+      time: 'Just now'
+    };
+
+    setPosts([newPost, ...posts]);
+    setNewPostText('');
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Back button */}
+      <button onClick={() => navigate('/communities')} className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 transition-colors">
+        <ArrowLeft className="w-4 h-4" />
+        Back to Communities
+      </button>
+
+      {/* Banner & Header */}
+      <div className="relative rounded-3xl overflow-hidden h-48 md:h-64 shadow-md">
+        <img src={community.coverImage} alt={community.name} className="w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 p-6 md:p-8 flex items-end gap-4">
+          <div className="w-16 h-16 md:w-20 md:h-20 rounded-3xl bg-white shadow-xl flex items-center justify-center text-3xl md:text-4xl border-4 border-white flex-shrink-0">
+            {community.icon}
+          </div>
+          <div className="flex-1 min-w-0">
+            <Badge variant="blue" className="mb-2">{community.sport}</Badge>
+            <h1 className="text-xl md:text-3xl font-black text-white leading-tight truncate mb-1">{community.name}</h1>
+            <p className="text-white/80 text-xs md:text-sm truncate max-w-2xl">{community.description}</p>
+          </div>
+          <Button
+            variant={joined ? 'secondary' : 'primary'}
+            onClick={() => setJoined(j => !j)}
+            className="flex-shrink-0"
+          >
+            {joined ? '✓ Joined' : '+ Join'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Left feed */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Create Post Card */}
+          {joined ? (
+            <div className="card p-5 space-y-4">
+              <h3 className="font-bold text-slate-900 text-sm">Start a Conversation</h3>
+              <form onSubmit={handleCreatePost} className="flex gap-3 items-start">
+                <Avatar src={user?.avatar} name={user?.name || 'You'} size="sm" />
+                <div className="flex-1 space-y-3">
+                  <textarea
+                    value={newPostText}
+                    onChange={e => setNewPostText(e.target.value)}
+                    placeholder={`Post something in ${community.name}...`}
+                    rows={3}
+                    className="w-full text-sm text-slate-700 placeholder-slate-400 focus:outline-none resize-none bg-slate-50 p-3 rounded-xl border border-slate-100"
+                  />
+                  <div className="flex justify-end">
+                    <Button type="submit" size="sm" icon={<Send className="w-3.5 h-3.5" />}>Post</Button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          ) : (
+            <div className="card p-6 text-center bg-slate-50 border border-slate-100 space-y-3">
+              <div className="text-3xl">🔒</div>
+              <h3 className="font-bold text-slate-800">Join to participate</h3>
+              <p className="text-slate-500 text-sm max-w-sm mx-auto">You must join the {community.name} community to post threads and comment on discussions.</p>
+              <Button variant="primary" size="sm" onClick={() => setJoined(true)}>Join Community</Button>
+            </div>
+          )}
+
+          {/* Feed list */}
+          <div className="space-y-4">
+            <h2 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-primary-500" />
+              Discussions
+            </h2>
+            {posts.map(post => (
+              <div key={post.id} className="card p-5 space-y-4">
+                <div className="flex items-center gap-3">
+                  <Avatar src={post.author.avatar} name={post.author.name} size="sm" />
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{post.author.name}</p>
+                    <p className="text-xs text-slate-400">@{post.author.username} · {post.time}</p>
+                  </div>
+                </div>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-line">{post.content}</p>
+                <div className="flex gap-4 pt-2 border-t border-slate-50 text-xs text-slate-500">
+                  <button className="flex items-center gap-1.5 hover:text-red-500 transition-colors">
+                    <Heart className="w-4 h-4" />
+                    <span>{post.likes}</span>
+                  </button>
+                  <button className="flex items-center gap-1.5 hover:text-primary-600 transition-colors">
+                    <MessageSquare className="w-4 h-4" />
+                    <span>{post.comments} comments</span>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Info Sidebar */}
+        <div className="space-y-6">
+          <div className="card p-5 space-y-4">
+            <h3 className="font-bold text-slate-900 text-sm">About Community</h3>
+            <p className="text-xs text-slate-500 leading-relaxed">{community.description}</p>
+            <div className="space-y-3 pt-3 border-t border-slate-100 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-medium">Members</span>
+                <span className="font-bold text-slate-700">{formatNumber(community.members + (joined && !community.isJoined ? 1 : 0))}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-medium">Weekly Posts</span>
+                <span className="font-bold text-slate-700">{formatNumber(community.posts)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400 font-medium">Category</span>
+                <span className="font-bold text-slate-700 capitalize">{community.sport}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

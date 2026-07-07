@@ -1,24 +1,53 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Compass, Github } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Compass, Github, KeyRound } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button, Input, Divider } from '../../components/ui';
 
 export default function LoginPage() {
-  const { login, loginWithGoogle, loginWithGitHub, loading } = useAuth();
+  const { login, loginWithGoogle, loginWithGitHub, loading, sendOtp, verifyOtp } = useAuth();
   const navigate = useNavigate();
+  const [loginMethod, setLoginMethod] = useState<'password' | 'otp'>('password');
   const [form, setForm] = useState({ email: '', password: '' });
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
 
+  // OTP Login States
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [sendingOtp, setSendingOtp] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (!form.email || !form.password) { setError('Please fill in all fields.'); return; }
-    const { ok, error: authError } = await login(form.email, form.password);
-    if (ok) navigate('/dashboard');
-    else setError(authError ?? 'Invalid credentials. Please try again.');
+
+    if (loginMethod === 'password') {
+      if (!form.email || !form.password) { setError('Please fill in all fields.'); return; }
+      const { ok, error: authError } = await login(form.email, form.password);
+      if (ok) navigate('/dashboard');
+      else setError(authError ?? 'Invalid credentials. Please try again.');
+    } else {
+      // OTP Verification
+      if (!otpCode) { setError('Please enter the verification code.'); return; }
+      const { ok, error: verifyErr } = await verifyOtp(form.email, otpCode);
+      if (ok) navigate('/dashboard');
+      else setError(verifyErr ?? 'Invalid verification code. Please try again.');
+    }
+  };
+
+  const handleSendOtp = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!form.email) { setError('Please enter your email.'); return; }
+    setSendingOtp(true);
+    const { ok, error: otpErr } = await sendOtp(form.email);
+    setSendingOtp(false);
+    if (ok) {
+      setOtpSent(true);
+    } else {
+      setError(otpErr ?? 'Failed to send verification code. Please try again.');
+    }
   };
 
   const handleSocialLogin = async (provider: 'google' | 'github') => {
@@ -27,7 +56,6 @@ export default function LoginPage() {
     try {
       if (provider === 'google') await loginWithGoogle();
       else await loginWithGitHub();
-      // OAuth redirects the browser — no further action needed here
     } catch {
       setError('OAuth sign-in failed. Please try again.');
       setSocialLoading(null);
@@ -85,9 +113,27 @@ export default function LoginPage() {
           </div>
 
           <div className="bg-white rounded-3xl shadow-card p-8 md:p-10">
-            <div className="mb-8">
+            <div className="mb-6">
               <h1 className="text-2xl font-black text-slate-900 mb-1">Welcome back!</h1>
               <p className="text-slate-500">Sign in to continue your adventures</p>
+            </div>
+
+            {/* Login method toggle tabs */}
+            <div className="flex bg-slate-100 rounded-xl p-1 mb-6">
+              <button
+                type="button"
+                onClick={() => { setLoginMethod('password'); setError(''); }}
+                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${loginMethod === 'password' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                Password Login
+              </button>
+              <button
+                type="button"
+                onClick={() => { setLoginMethod('otp'); setError(''); }}
+                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all ${loginMethod === 'otp' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                Email OTP Code
+              </button>
             </div>
 
             {/* Social login */}
@@ -140,47 +186,108 @@ export default function LoginPage() {
                 placeholder="you@example.com"
                 value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                disabled={loginMethod === 'otp' && otpSent}
                 icon={<Mail className="w-4 h-4" />}
               />
-              <div className="relative">
-                <Input
-                  label="Password"
-                  type={showPw ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={form.password}
-                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                  icon={<Lock className="w-4 h-4" />}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(s => !s)}
-                  className="absolute right-3 top-9 text-slate-400 hover:text-slate-600"
-                >
-                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
 
-              {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                  {error}
-                </div>
+              {loginMethod === 'password' ? (
+                <>
+                  <div className="relative">
+                    <Input
+                      label="Password"
+                      type={showPw ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={form.password}
+                      onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                      icon={<Lock className="w-4 h-4" />}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPw(s => !s)}
+                      className="absolute right-3 top-9 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  <div className="flex items-center justify-between text-sm pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
+                      <span className="text-slate-600">Remember me</span>
+                    </label>
+                    <Link to="/forgot-password" className="text-primary-600 font-medium hover:underline">Forgot password?</Link>
+                  </div>
+
+                  {error && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                      {error}
+                    </div>
+                  )}
+
+                  <Button type="submit" variant="gradient" className="w-full" loading={loading}>
+                    Sign in to ExploreX
+                  </Button>
+
+                  <button type="button" onClick={demoLogin} className="w-full py-2.5 text-sm text-slate-500 hover:text-primary-600 transition-colors font-medium">
+                    🚀 Fill demo credentials
+                  </button>
+                </>
+              ) : (
+                <>
+                  {otpSent ? (
+                    <>
+                      <div className="p-4 bg-primary-50 border border-primary-100 rounded-2xl text-primary-800 text-xs leading-relaxed">
+                        🔑 A login code was sent to <strong className="text-primary-950">{form.email}</strong>. Check your inbox and spam folder.
+                      </div>
+
+                      <Input
+                        label="One-Time Verification Code (OTP)"
+                        type="text"
+                        placeholder="e.g. 123456"
+                        value={otpCode}
+                        onChange={e => setOtpCode(e.target.value)}
+                        icon={<KeyRound className="w-4 h-4" />}
+                      />
+
+                      {error && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                          {error}
+                        </div>
+                      )}
+
+                      <Button type="submit" variant="gradient" className="w-full" loading={loading}>
+                        Verify & Sign In
+                      </Button>
+
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        className="w-full py-2 text-xs text-slate-500 hover:text-primary-600 transition-colors font-semibold"
+                      >
+                        Resend Code
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {error && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+                          {error}
+                        </div>
+                      )}
+
+                      <Button
+                        type="button"
+                        onClick={handleSendOtp}
+                        variant="gradient"
+                        className="w-full"
+                        loading={sendingOtp}
+                      >
+                        Send Verification Code
+                      </Button>
+                    </>
+                  )}
+                </>
               )}
-
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500" />
-                  <span className="text-slate-600">Remember me</span>
-                </label>
-                <Link to="/forgot-password" className="text-primary-600 font-medium hover:underline">Forgot password?</Link>
-              </div>
-
-              <Button type="submit" variant="gradient" className="w-full" loading={loading}>
-                Sign in to ExploreX
-              </Button>
-
-              <button type="button" onClick={demoLogin} className="w-full py-2.5 text-sm text-slate-500 hover:text-primary-600 transition-colors font-medium">
-                🚀 Fill demo credentials
-              </button>
             </form>
 
             <p className="mt-6 text-center text-sm text-slate-500">
