@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ExploreX — Explore. Share. Connect.</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        primary: { 50:'#EFF6FF',100:'#DBEAFE',600:'#2563EB',700:'#1D4ED8' },
+        secondary: { 600:'#7C3AED',700:'#6D28D9' },
+        accent: { 500:'#06B6D4' },
+        surface: '#F8FAFC',
+      },
+      fontFamily: { sans: ['Inter','sans-serif'] },
+      animation: {
+        'fade-in': 'fadeIn 0.6s ease-out',
+        'slide-up': 'slideUp 0.5s ease-out',
+        'float': 'float 3s ease-in-out infinite',
+        'pulse-slow': 'pulse 3s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeIn: {'0%':{opacity:'0'},'100%':{opacity:'1'}},
+        slideUp: {'0%':{opacity:'0',transform:'translateY(20px)'},'100%':{opacity:'1',transform:'translateY(0)'}},
+        float: {'0%,100%':{transform:'translateY(0)'},'50%':{transform:'translateY(-8px)'}},
+      },
+    }
+  }
+}
+</script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', sans-serif; background: #F8FAFC; color: #0f172a; }
+.glass { background: rgba(255,255,255,0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.3); }
+.card { background: #fff; border-radius: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.04); transition: all 0.25s ease; }
+.card:hover { box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 20px 40px rgba(0,0,0,0.08); transform: translateY(-2px); }
+.btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #2563EB; color: #fff; font-weight: 700; border-radius: 12px; border: none; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+.btn-primary:hover { background: #1D4ED8; box-shadow: 0 0 30px rgba(37,99,235,0.3); }
+.btn-secondary { display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px; background: #fff; color: #1e293b; font-weight: 700; border-radius: 12px; border: 1.5px solid #e2e8f0; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+.btn-secondary:hover { border-color: #93c5fd; background: #eff6ff; }
+.gradient-text { background: linear-gradient(135deg, #2563EB, #7C3AED); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.gradient-bg { background: linear-gradient(135deg, #2563EB, #7C3AED); }
+.badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 600; }
+.badge-blue { background: #dbeafe; color: #1d4ed8; }
+.badge-green { background: #d1fae5; color: #065f46; }
+.badge-amber { background: #fef3c7; color: #92400e; }
+.badge-red { background: #fee2e2; color: #991b1b; }
+.sidebar { position: fixed; left: 0; top: 64px; width: 256px; height: calc(100vh - 64px); background: #fff; border-right: 1px solid #f1f5f9; overflow-y: auto; z-index: 40; }
+.main-content { margin-left: 256px; padding-top: 64px; min-height: 100vh; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; font-size: 14px; font-weight: 500; color: #475569; cursor: pointer; transition: all 0.15s; text-decoration: none; }
+.nav-item:hover, .nav-item.active { background: #eff6ff; color: #1d4ed8; }
+.stat-card { background: #fff; border-radius: 16px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 10px 30px rgba(0,0,0,0.04); }
+.shimmer { background: linear-gradient(90deg, #f0f4f8 25%, #e2e8f0 50%, #f0f4f8 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+input, select, textarea { font-family: 'Inter', sans-serif; }
+.progress-bar { height: 6px; background: #e2e8f0; border-radius: 100px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(90deg, #2563EB, #7C3AED); border-radius: 100px; transition: width 0.5s ease; }
+.page { display: none; }
+.page.active { display: block; animation: fadeIn 0.3s ease-out; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+.live-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; animation: pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.2)} }
+</style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur border-b border-slate-100 h-16 flex items-center px-6 justify-between shadow-sm">
+  <div class="flex items-center gap-2 cursor-pointer" onclick="showPage('landing')">
+    <div class="w-8 h-8 rounded-xl gradient-bg flex items-center justify-center">
+      <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/><path d="M2 12h20"/></svg>
+    </div>
+    <span class="text-xl font-black text-slate-900">Explore<span class="text-blue-600">X</span></span>
+  </div>
+  <div class="hidden md:flex items-center gap-1 flex-1 max-w-md mx-8">
+    <div class="relative w-full">
+      <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="Search destinations, blogs, communities..." class="w-full pl-10 pr-4 py-2 bg-slate-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-400 focus:bg-white transition-all"/>
+    </div>
+  </div>
+  <div id="navAuth" class="flex items-center gap-2">
+    <button onclick="showPage('login')" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 hover:bg-slate-100 transition-colors">Sign in</button>
+    <button onclick="showPage('signup')" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 transition-colors shadow-md">Get Started</button>
+  </div>
+  <div id="navUser" class="hidden flex items-center gap-2">
+    <button onclick="showPage('write')" class="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">✏️ Write</button>
+    <div class="relative">
+      <button onclick="toggleNotif()" class="relative p-2 rounded-lg text-slate-600 hover:bg-slate-100">
+        🔔
+        <span class="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">2</span>
+      </button>
+    </div>
+    <button onclick="showPage('dashboard')" class="w-8 h-8 rounded-full gradient-bg flex items-center justify-center text-white font-bold text-sm ring-2 ring-white shadow-md">A</button>
+  </div>
+</nav>
+
+<!-- SIDEBAR (hidden on landing/auth) -->
+<div id="sidebar" class="sidebar hidden">
+  <div class="p-4 border-b border-slate-100">
+    <div class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer" onclick="showPage('profile')">
+      <div class="w-10 h-10 rounded-full gradient-bg flex items-center justify-center text-white font-bold">A</div>
+      <div>
+        <p class="text-sm font-semibold text-slate-900">Alex Morgan</p>
+        <p class="text-xs text-slate-500">@alexmorgan</p>
+      </div>
+    </div>
+    <div class="mt-3 px-2">
+      <div class="flex justify-between text-xs text-slate-500 mb-1.5">
+        <span>8,750 XP</span><span>10,000 XP</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:87.5%"></div></div>
+    </div>
+  </div>
+  <nav class="p-2 space-y-0.5">
+    <a class="nav-item active" onclick="showPage('dashboard')">🏠 Home</a>
+    <a class="nav-item" onclick="showPage('explore')">🧭 Explore</a>
+    <a class="nav-item" onclick="showPage('blogs')">📖 Blogs</a>
+    <a class="nav-item" onclick="showPage('travel')">✈️ Travel</a>
+    <a class="nav-item" onclick="showPage('sports')">⚡ Sports</a>
+    <a class="nav-item" onclick="showPage('communities')">👥 Communities</a>
+    <a class="nav-item" onclick="showPage('ai')">🧠 AI Planner</a>
+    <a class="nav-item" onclick="showPage('bookmarks')">🔖 Bookmarks</a>
+    <a class="nav-item" onclick="showPage('leaderboard')">🏆 Leaderboard</a>
+    <a class="nav-item" onclick="showPage('analytics')">📊 Analytics</a>
+    <a class="nav-item" onclick="showPage('profile')">👤 Profile</a>
+    <a class="nav-item" onclick="showPage('settings')">⚙️ Settings</a>
+  </nav>
+  <div class="p-4 border-t border-slate-100 mt-4">
+    <button onclick="showPage('write')" class="w-full py-2.5 gradient-bg text-white text-sm font-semibold rounded-xl hover:opacity-90 transition-opacity shadow-md">✏️ Write a Blog</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     LANDING PAGE
+══════════════════════════════════════ -->
+<div id="page-landing" class="page active">
+  <!-- Hero -->
+  <section class="relative min-h-screen flex items-center justify-center overflow-hidden">
+    <div class="absolute inset-0">
+      <img src="https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1920&h=1080&fit=crop" alt="" class="w-full h-full object-cover"/>
+      <div class="absolute inset-0" style="background:linear-gradient(135deg,rgba(15,23,42,0.88),rgba(37,99,235,0.4))"></div>
+    </div>
+    <div class="absolute top-1/4 left-10 w-64 h-64 rounded-full animate-pulse-slow" style="background:rgba(37,99,235,0.15);filter:blur(60px)"></div>
+    <div class="absolute bottom-1/4 right-10 w-80 h-80 rounded-full animate-pulse-slow" style="background:rgba(124,58,237,0.15);filter:blur(60px);animation-delay:1s"></div>
+    <div class="relative z-10 max-w-5xl mx-auto px-6 text-center pt-24">
+      <div class="inline-flex items-center gap-2 mb-8 px-4 py-2 rounded-full text-sm font-medium text-white border" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.2);backdrop-filter:blur(8px)">
+        ✨ AI-powered travel planning is here →
+      </div>
+      <h1 class="text-5xl md:text-7xl font-black text-white leading-tight mb-6" style="animation:slideUp 0.6s ease-out both">
+        Explore The World.<br/>
+        <span class="gradient-text">Share Your Story.</span>
+      </h1>
+      <p class="text-xl mb-10 max-w-2xl mx-auto leading-relaxed" style="color:rgba(255,255,255,0.75)">
+        Join thousands of travelers and sports enthusiasts sharing experiences around the globe. Discover hidden gems, connect with communities, plan your adventure.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+        <button onclick="doSignup()" class="btn-primary text-lg px-8 py-4">🌍 Start Exploring</button>
+        <button onclick="showPage('write-public')" class="btn-secondary text-lg px-8 py-4" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.3);color:white">▶ Write Your Story</button>
+      </div>
+      <!-- Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
+        <div class="p-4 rounded-2xl text-center" style="background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15)">
+          <div class="text-2xl font-black text-white" id="statUsers">128.5K+</div>
+          <div class="text-xs mt-0.5" style="color:rgba(255,255,255,0.6)">Active Users</div>
+        </div>
+        <div class="p-4 rounded-2xl text-center" style="background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15)">
+          <div class="text-2xl font-black text-white">45.2K+</div>
+          <div class="text-xs mt-0.5" style="color:rgba(255,255,255,0.6)">Blog Posts</div>
+        </div>
+        <div class="p-4 rounded-2xl text-center" style="background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15)">
+          <div class="text-2xl font-black text-white">1.8K+</div>
+          <div class="text-xs mt-0.5" style="color:rgba(255,255,255,0.6)">Destinations</div>
+        </div>
+        <div class="p-4 rounded-2xl text-center" style="background:rgba(255,255,255,0.1);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.15)">
+          <div class="text-2xl font-black text-white">340+</div>
+          <div class="text-xs mt-0.5" style="color:rgba(255,255,255,0.6)">Communities</div>
+        </div>
+      </div>
+    </div>
+    <div class="absolute bottom-8 left-1/2 -translate-x-1/2 text-white/50 animate-bounce text-2xl">↓</div>
+  </section>
+
+  <!-- Trending Destinations -->
+  <section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="flex items-end justify-between mb-10">
+        <div>
+          <p class="text-sm font-semibold text-blue-600 uppercase tracking-wide mb-2">📈 Trending</p>
+          <h2 class="text-3xl md:text-4xl font-black text-slate-900">Popular Destinations</h2>
+          <p class="text-slate-500 mt-2">Explore the world's most loved destinations</p>
+        </div>
+        <button onclick="doSignup()" class="hidden md:flex items-center gap-1 text-blue-600 font-semibold hover:gap-2 transition-all">View all →</button>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="card overflow-hidden cursor-pointer" onclick="doSignup()">
+          <div class="relative overflow-hidden h-52"><img src="https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=600&h=400&fit=crop" alt="Santorini" class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"/><div class="absolute inset-0" style="background:linear-gradient(to top,rgba(0,0,0,0.65),transparent)"></div><div class="absolute bottom-0 left-0 right-0 p-4"><h3 class="text-white font-black text-lg">Santorini</h3><p class="text-white/80 text-sm flex items-center gap-1">📍 Greece</p></div><div class="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg text-white text-sm font-bold" style="background:rgba(0,0,0,0.3);backdrop-filter:blur(4px)">⭐ 4.9</div></div>
+          <div class="p-4"><p class="text-sm text-slate-500 mb-3 line-clamp-2">Iconic whitewashed buildings perched on volcanic cliffs overlooking the Aegean Sea.</p><div class="flex items-center justify-between text-xs"><span class="text-purple-600 font-semibold">💎 Luxury</span><span class="text-slate-400">8,420 reviews</span></div><div class="flex gap-1.5 mt-2"><span class="badge badge-blue">Beach</span><span class="badge badge-blue">Romantic</span><span class="badge badge-blue">Wine</span></div></div>
+        </div>
+        <div class="card overflow-hidden cursor-pointer" onclick="doSignup()">
+          <div class="relative overflow-hidden h-52"><img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=400&fit=crop" alt="Kyoto" class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"/><div class="absolute inset-0" style="background:linear-gradient(to top,rgba(0,0,0,0.65),transparent)"></div><div class="absolute bottom-0 left-0 right-0 p-4"><h3 class="text-white font-black text-lg">Kyoto</h3><p class="text-white/80 text-sm">📍 Japan</p></div><div class="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg text-white text-sm font-bold" style="background:rgba(0,0,0,0.3);backdrop-filter:blur(4px)">⭐ 4.8</div></div>
+          <div class="p-4"><p class="text-sm text-slate-500 mb-3">Ancient temples, geisha districts, and breathtaking bamboo forests.</p><div class="flex items-center justify-between text-xs"><span class="text-amber-600 font-semibold">💵 Mid-Range</span><span class="text-slate-400">12,100 reviews</span></div><div class="flex gap-1.5 mt-2"><span class="badge badge-blue">Culture</span><span class="badge badge-blue">History</span><span class="badge badge-blue">Food</span></div></div>
+        </div>
+        <div class="card overflow-hidden cursor-pointer" onclick="doSignup()">
+          <div class="relative overflow-hidden h-52"><img src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&h=400&fit=crop" alt="Bali" class="w-full h-full object-cover transition-transform duration-500 hover:scale-110"/><div class="absolute inset-0" style="background:linear-gradient(to top,rgba(0,0,0,0.65),transparent)"></div><div class="absolute bottom-0 left-0 right-0 p-4"><h3 class="text-white font-black text-lg">Bali</h3><p class="text-white/80 text-sm">📍 Indonesia</p></div><div class="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg text-white text-sm font-bold" style="background:rgba(0,0,0,0.3);backdrop-filter:blur(4px)">⭐ 4.7</div></div>
+          <div class="p-4"><p class="text-sm text-slate-500 mb-3">Tropical paradise of rice terraces, ancient temples, and stunning beaches.</p><div class="flex items-center justify-between text-xs"><span class="text-green-600 font-semibold">💚 Budget</span><span class="text-slate-400">15,600 reviews</span></div><div class="flex gap-1.5 mt-2"><span class="badge badge-blue">Beach</span><span class="badge badge-blue">Yoga</span><span class="badge badge-blue">Surfing</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Blogs -->
+  <section class="py-20" style="background:#F8FAFC">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="mb-10">
+        <p class="text-sm font-semibold text-purple-600 uppercase tracking-wide mb-2">📖 Latest Stories</p>
+        <h2 class="text-3xl md:text-4xl font-black text-slate-900">Featured Blogs</h2>
+        <p class="text-slate-500 mt-2">Stories from explorers and sports enthusiasts worldwide</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="card overflow-hidden cursor-pointer group" onclick="doSignup()">
+          <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=600&h=350&fit=crop" alt="" class="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105"/><div class="absolute top-3 left-3"><span class="badge badge-blue">Travel</span></div></div>
+          <div class="p-5"><p class="text-xs text-slate-400 mb-2">🕐 12 min · Jan 15, 2024</p><h3 class="font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">Hidden Gems of Southeast Asia: A Complete 30-Day Itinerary</h3><p class="text-sm text-slate-500 mb-4 line-clamp-2">Discover the untouched beauty of Vietnam, Cambodia, and Thailand beyond the tourist trail.</p><div class="flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-bold">A</div><div><p class="text-xs font-semibold">Alex Morgan</p></div></div><div class="flex gap-1"><span class="text-xs text-slate-500">❤️ 1.2K</span><span class="text-xs text-slate-500 ml-2">👁 15.6K</span></div></div></div>
+        </div>
+        <div class="card overflow-hidden cursor-pointer group" onclick="doSignup()">
+          <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=600&h=350&fit=crop" alt="" class="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105"/><div class="absolute top-3 left-3"><span class="badge badge-blue">Sports</span></div></div>
+          <div class="p-5"><p class="text-xs text-slate-400 mb-2">🕐 8 min · Jan 12, 2024</p><h3 class="font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">The Ultimate Guide to Following Cricket World Cup 2024 Across India</h3><p class="text-sm text-slate-500 mb-4 line-clamp-2">Everything about attending matches, best venues, and experiencing cricketing fever firsthand.</p><div class="flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold">P</div><div><p class="text-xs font-semibold">Priya Sharma</p></div></div><div class="flex gap-1"><span class="text-xs text-slate-500">❤️ 892</span><span class="text-xs text-slate-500 ml-2">👁 22.4K</span></div></div></div>
+        </div>
+        <div class="card overflow-hidden cursor-pointer group" onclick="doSignup()">
+          <div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=600&h=350&fit=crop" alt="" class="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105"/><div class="absolute top-3 left-3"><span class="badge badge-blue">Travel</span></div></div>
+          <div class="p-5"><p class="text-xs text-slate-400 mb-2">🕐 15 min · Jan 10, 2024</p><h3 class="font-bold text-slate-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">Tokyo to Kyoto: The Perfect Japan Rail Adventure</h3><p class="text-sm text-slate-500 mb-4 line-clamp-2">Riding bullet trains through Japan's most iconic destinations, from neon-lit Tokyo to ancient temples.</p><div class="flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-7 h-7 rounded-full bg-cyan-500 flex items-center justify-center text-white text-xs font-bold">M</div><div><p class="text-xs font-semibold">Marcus Johnson</p></div></div><div class="flex gap-1"><span class="text-xs text-slate-500">❤️ 2.1K</span><span class="text-xs text-slate-500 ml-2">👁 34.8K</span></div></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Sports Communities -->
+  <section class="py-20" style="background:linear-gradient(135deg,#0f172a,#1e3a8a,#4c1d95)">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <p class="text-sm font-semibold text-blue-400 uppercase tracking-wide mb-3">⚡ Communities</p>
+        <h2 class="text-3xl md:text-4xl font-black text-white mb-3">Popular Sports Communities</h2>
+        <p class="text-lg" style="color:rgba(255,255,255,0.6)">Join thousands of fans in real-time discussions</p>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div class="card overflow-hidden cursor-pointer" onclick="doSignup()">
+          <div class="h-20 overflow-hidden"><img src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&h=120&fit=crop" alt="" class="w-full h-full object-cover"/></div>
+          <div class="p-5 -mt-5 relative"><div class="flex items-end justify-between mb-3"><div class="w-12 h-12 rounded-2xl bg-white shadow-md flex items-center justify-center text-2xl border-2 border-white">🏏</div><button onclick="doSignup()" class="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-lg">Join</button></div><h3 class="font-bold text-slate-900">Cricket Nation</h3><p class="text-xs text-slate-500 mb-3">The ultimate community for cricket fans worldwide.</p><div class="flex gap-4 text-xs text-slate-500"><span>👥 <strong class="text-slate-700">45.2K</strong> members</span><span>💬 <strong class="text-slate-700">8.9K</strong> posts</span></div></div>
+        </div>
+        <div class="card overflow-hidden cursor-pointer" onclick="doSignup()">
+          <div class="h-20 overflow-hidden"><img src="https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=400&h=120&fit=crop" alt="" class="w-full h-full object-cover"/></div>
+          <div class="p-5 -mt-5 relative"><div class="flex items-end justify-between mb-3"><div class="w-12 h-12 rounded-2xl bg-white shadow-md flex items-center justify-center text-2xl border-2 border-white">⚽</div><button onclick="doSignup()" class="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-lg">Join</button></div><h3 class="font-bold text-slate-900">Football United</h3><p class="text-xs text-slate-500 mb-3">Global football community. All leagues, all passion.</p><div class="flex gap-4 text-xs text-slate-500"><span>👥 <strong class="text-slate-700">89.4K</strong> members</span><span>💬 <strong class="text-slate-700">23.1K</strong> posts</span></div></div>
+        </div>
+        <div class="card overflow-hidden cursor-pointer" onclick="doSignup()">
+          <div class="h-20 overflow-hidden"><img src="https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=120&fit=crop" alt="" class="w-full h-full object-cover"/></div>
+          <div class="p-5 -mt-5 relative"><div class="flex items-end justify-between mb-3"><div class="w-12 h-12 rounded-2xl bg-white shadow-md flex items-center justify-center text-2xl border-2 border-white">🏀</div><button onclick="doSignup()" class="px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-lg">Join</button></div><h3 class="font-bold text-slate-900">Hoop Dreams</h3><p class="text-xs text-slate-500 mb-3">NBA, EuroLeague, and street basketball discussions.</p><div class="flex gap-4 text-xs text-slate-500"><span>👥 <strong class="text-slate-700">32.1K</strong> members</span><span>💬 <strong class="text-slate-700">12.4K</strong> posts</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- AI Showcase -->
+  <section class="py-20 bg-white overflow-hidden">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+        <div>
+          <div class="flex items-center gap-2 mb-4"><div class="w-8 h-8 rounded-xl gradient-bg flex items-center justify-center text-white">✨</div><span class="text-sm font-semibold text-blue-600 uppercase tracking-wide">AI-Powered</span></div>
+          <h2 class="text-4xl font-black text-slate-900 mb-4 leading-tight">Plan Your Perfect Trip with <span class="gradient-text">AI Intelligence</span></h2>
+          <p class="text-slate-600 text-lg leading-relaxed mb-8">Tell us your destination, budget, and travel style. Our AI creates a complete personalized itinerary with cost breakdowns and insider tips.</p>
+          <div class="space-y-4 mb-8">
+            <div class="flex gap-4"><div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style="background:#eff6ff">🗺️</div><div><h4 class="font-semibold text-slate-900">Smart Itinerary</h4><p class="text-sm text-slate-500">Day-by-day plans optimized for your travel style</p></div></div>
+            <div class="flex gap-4"><div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style="background:#eff6ff">💰</div><div><h4 class="font-semibold text-slate-900">Budget Breakdown</h4><p class="text-sm text-slate-500">Detailed cost estimates for every activity</p></div></div>
+            <div class="flex gap-4"><div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style="background:#eff6ff">🎯</div><div><h4 class="font-semibold text-slate-900">Local Recommendations</h4><p class="text-sm text-slate-500">Hidden gems based on real traveler data</p></div></div>
+          </div>
+          <button onclick="doSignup()" class="btn-primary text-lg px-8 py-4">Try AI Planner Free →</button>
+        </div>
+        <!-- AI Preview Card -->
+        <div class="relative">
+          <div class="absolute inset-0 rounded-3xl" style="background:linear-gradient(135deg,#2563eb20,#7c3aed20);filter:blur(40px);transform:scale(0.95)"></div>
+          <div class="relative bg-white rounded-2xl shadow-2xl p-6 border border-slate-100">
+            <div class="flex items-center gap-3 mb-5 pb-5 border-b border-slate-100">
+              <div class="w-10 h-10 gradient-bg rounded-xl flex items-center justify-center text-white font-bold">✨</div>
+              <div><p class="font-semibold text-slate-900">AI Itinerary: Bali, Indonesia</p><p class="text-xs text-slate-400">7 days · $1,200 budget · 2 travelers</p></div>
+              <span class="ml-auto badge badge-green">Generated</span>
+            </div>
+            <div class="space-y-2">
+              <div class="flex gap-3 p-3 rounded-xl" style="background:#eff6ff">
+                <div class="w-8 h-8 gradient-bg rounded-xl flex items-center justify-center text-white text-xs font-black">1</div>
+                <div class="flex-1"><p class="text-sm font-semibold text-blue-700 mb-1">Day 1 — Arrival</p><div class="flex flex-wrap gap-1"><span class="text-xs bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">Arrive Denpasar</span><span class="text-xs bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">Eco resort check-in</span><span class="text-xs bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">Sunset at Kuta</span></div></div>
+                <span class="text-xs font-bold text-green-600">$180</span>
+              </div>
+              <div class="flex gap-3 p-3 rounded-xl hover:bg-slate-50">
+                <div class="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 text-xs font-black">2</div>
+                <div class="flex-1"><p class="text-sm font-semibold text-slate-700 mb-1">Day 2 — Culture</p><div class="flex flex-wrap gap-1"><span class="text-xs bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">Tegallalang</span><span class="text-xs bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">Monkey Forest</span><span class="text-xs bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">Cooking class</span></div></div>
+                <span class="text-xs font-bold text-green-600">$65</span>
+              </div>
+              <div class="flex gap-3 p-3 rounded-xl hover:bg-slate-50">
+                <div class="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 text-xs font-black">3</div>
+                <div class="flex-1"><p class="text-sm font-semibold text-slate-700 mb-1">Day 3 — Adventure</p><div class="flex flex-wrap gap-1"><span class="text-xs bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">Sunrise hike</span><span class="text-xs bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">Hot Springs</span><span class="text-xs bg-white border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">Beach dinner</span></div></div>
+                <span class="text-xs font-bold text-green-600">$90</span>
+              </div>
+            </div>
+            <div class="mt-4 p-3 bg-slate-50 rounded-xl flex items-center justify-between">
+              <span class="text-sm font-semibold text-slate-700">Estimated Total</span>
+              <span class="text-lg font-black text-blue-600">$1,184 / 2 people</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="py-20 gradient-bg">
+    <div class="max-w-3xl mx-auto px-6 text-center">
+      <h2 class="text-4xl font-black text-white mb-4">Ready to Start Your Adventure?</h2>
+      <p class="text-lg mb-8" style="color:rgba(255,255,255,0.8)">Join 128,000+ explorers already sharing their stories on ExploreX</p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <button onclick="doSignup()" class="px-8 py-4 bg-white text-blue-700 font-black rounded-2xl hover:shadow-2xl transition-all text-lg">Create Free Account</button>
+        <button onclick="doSignup()" class="px-8 py-4 font-black rounded-2xl text-lg text-white border" style="background:rgba(255,255,255,0.1);border-color:rgba(255,255,255,0.3)">Browse Content</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-400 py-16">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+        <div class="col-span-2 md:col-span-1">
+          <div class="flex items-center gap-2 mb-4"><div class="w-8 h-8 rounded-xl gradient-bg flex items-center justify-center text-white">🧭</div><span class="text-xl font-black text-white">Explore<span class="text-blue-400">X</span></span></div>
+          <p class="text-sm leading-relaxed text-slate-400">The world's best platform for travel bloggers and sports communities.</p>
+          <div class="flex gap-3 mt-4">
+            <div class="w-9 h-9 bg-slate-800 rounded-xl flex items-center justify-center cursor-pointer hover:bg-slate-700 transition-colors">𝕏</div>
+            <div class="w-9 h-9 bg-slate-800 rounded-xl flex items-center justify-center cursor-pointer hover:bg-slate-700 transition-colors">📸</div>
+            <div class="w-9 h-9 bg-slate-800 rounded-xl flex items-center justify-center cursor-pointer hover:bg-slate-700 transition-colors">🐙</div>
+          </div>
+        </div>
+        <div><h4 class="text-white font-semibold text-sm mb-4">Platform</h4><ul class="space-y-2 text-sm"><li class="hover:text-white cursor-pointer transition-colors">Explore</li><li class="hover:text-white cursor-pointer transition-colors">Blogs</li><li class="hover:text-white cursor-pointer transition-colors">Travel</li><li class="hover:text-white cursor-pointer transition-colors">Sports</li></ul></div>
+        <div><h4 class="text-white font-semibold text-sm mb-4">Features</h4><ul class="space-y-2 text-sm"><li class="hover:text-white cursor-pointer transition-colors">AI Travel Planner</li><li class="hover:text-white cursor-pointer transition-colors">Analytics</li><li class="hover:text-white cursor-pointer transition-colors">Leaderboards</li><li class="hover:text-white cursor-pointer transition-colors">Bookmarks</li></ul></div>
+        <div><h4 class="text-white font-semibold text-sm mb-4">Company</h4><ul class="space-y-2 text-sm"><li class="hover:text-white cursor-pointer transition-colors">About</li><li class="hover:text-white cursor-pointer transition-colors">Blog</li><li class="hover:text-white cursor-pointer transition-colors">Careers</li><li class="hover:text-white cursor-pointer transition-colors">Privacy</li></ul></div>
+      </div>
+      <div class="border-t border-slate-800 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-slate-500">© 2024 ExploreX. All rights reserved.</p>
+        <p class="text-sm text-slate-500">Made with ❤️ for explorers worldwide</p>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<!-- ══════════════════════════════════════
+     LOGIN PAGE
+══════════════════════════════════════ -->
+<div id="page-login" class="page">
+  <div class="min-h-screen flex pt-16">
+    <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden" style="background:linear-gradient(135deg,#1d4ed8,#7c3aed)">
+      <img src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=900&h=1200&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover opacity-20"/>
+      <div class="relative z-10 flex flex-col justify-between p-12">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="showPage('landing')"><div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,255,255,0.2)">🧭</div><span class="text-2xl font-black text-white">ExploreX</span></div>
+        <div><h2 class="text-4xl font-black text-white leading-tight mb-4">Every Journey<br/>Deserves a Story</h2><p class="leading-relaxed mb-8" style="color:rgba(255,255,255,0.7);font-size:1.1rem">Join over 128,000 travelers sharing their experiences with the world.</p><div class="flex items-center gap-2"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop" class="w-10 h-10 rounded-full border-2" style="border-color:rgba(255,255,255,0.5)"/><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop" class="w-10 h-10 rounded-full border-2 -ml-3" style="border-color:rgba(255,255,255,0.5)"/><img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop" class="w-10 h-10 rounded-full border-2 -ml-3" style="border-color:rgba(255,255,255,0.5)"/><span class="ml-2 text-sm font-medium" style="color:rgba(255,255,255,0.8)">+12K this month</span></div></div>
+      </div>
+    </div>
+    <div class="flex-1 flex items-center justify-center p-6" style="background:#F8FAFC">
+      <div class="w-full max-w-md">
+        <div class="bg-white rounded-3xl shadow-xl p-8 md:p-10">
+          <h1 class="text-2xl font-black text-slate-900 mb-1">Welcome back!</h1>
+          <p class="text-slate-500 mb-8">Sign in to continue your adventures</p>
+          <div class="grid grid-cols-2 gap-3 mb-6">
+            <button class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors">
+              <svg class="w-4 h-4" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+              Google
+            </button>
+            <button onclick="doLogin()" class="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 transition-colors">🐙 GitHub</button>
+          </div>
+          <div class="relative flex items-center gap-4 mb-6"><hr class="flex-1 border-slate-200"/><span class="text-sm text-slate-400 font-medium">or continue with email</span><hr class="flex-1 border-slate-200"/></div>
+          <div class="space-y-4">
+            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Email address</label><input id="loginEmail" type="email" placeholder="you@example.com" value="alex@example.com" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"/></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label><input id="loginPw" type="password" placeholder="••••••••" value="demo123" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"/></div>
+            <div class="flex items-center justify-between text-sm"><label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked class="rounded"/><span class="text-slate-600">Remember me</span></label><a class="text-blue-600 font-medium hover:underline cursor-pointer">Forgot password?</a></div>
+            <button onclick="doLogin()" class="btn-primary w-full justify-center py-3.5 text-base">Sign in to ExploreX</button>
+            <button onclick="doLogin()" class="w-full py-2.5 text-sm text-slate-500 hover:text-blue-600 transition-colors font-medium">🚀 Fill demo credentials & login</button>
+          </div>
+          <p class="mt-6 text-center text-sm text-slate-500">Don't have an account? <a onclick="showPage('signup')" class="text-blue-600 font-semibold hover:underline cursor-pointer">Sign up free</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     SIGNUP PAGE
+══════════════════════════════════════ -->
+<div id="page-signup" class="page">
+  <div class="min-h-screen flex pt-16">
+    <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden" style="background:linear-gradient(135deg,#7c3aed,#1d4ed8)">
+      <img src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=900&h=1200&fit=crop" alt="" class="absolute inset-0 w-full h-full object-cover opacity-20"/>
+      <div class="relative z-10 flex flex-col justify-between p-12">
+        <div class="flex items-center gap-2 cursor-pointer" onclick="showPage('landing')"><div class="w-9 h-9 rounded-xl flex items-center justify-center" style="background:rgba(255,255,255,0.2)">🧭</div><span class="text-2xl font-black text-white">ExploreX</span></div>
+        <div><h2 class="text-4xl font-black text-white leading-tight mb-6">Your Adventure<br/>Starts Here</h2><div class="space-y-4">
+          <div class="flex items-center gap-3"><span class="text-2xl">✍️</span><p style="color:rgba(255,255,255,0.8);font-size:0.9rem">Write and share travel blogs with a global audience</p></div>
+          <div class="flex items-center gap-3"><span class="text-2xl">🤖</span><p style="color:rgba(255,255,255,0.8);font-size:0.9rem">Use AI to plan perfect trips within your budget</p></div>
+          <div class="flex items-center gap-3"><span class="text-2xl">🏆</span><p style="color:rgba(255,255,255,0.8);font-size:0.9rem">Join sports communities and earn achievement badges</p></div>
+          <div class="flex items-center gap-3"><span class="text-2xl">🌍</span><p style="color:rgba(255,255,255,0.8);font-size:0.9rem">Discover hidden gems from real travelers</p></div>
+        </div></div>
+      </div>
+    </div>
+    <div class="flex-1 flex items-center justify-center p-6" style="background:#F8FAFC">
+      <div class="w-full max-w-md">
+        <div class="bg-white rounded-3xl shadow-xl p-8 md:p-10">
+          <h1 class="text-2xl font-black text-slate-900 mb-1">Create your account</h1>
+          <p class="text-slate-500 mb-8">Free forever · No credit card required</p>
+          <div class="space-y-4">
+            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Full name</label><input type="text" placeholder="Alex Morgan" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"/></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Email address</label><input type="email" placeholder="you@example.com" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"/></div>
+            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Password</label><input type="password" placeholder="Min. 8 characters" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 transition-all"/></div>
+            <label class="flex items-start gap-2.5 cursor-pointer"><input type="checkbox" class="w-4 h-4 mt-0.5 rounded"/><span class="text-sm text-slate-600">I agree to ExploreX's <a class="text-blue-600 font-medium">Terms of Service</a> and <a class="text-blue-600 font-medium">Privacy Policy</a></span></label>
+            <button onclick="doLogin()" class="btn-primary w-full justify-center py-3.5 text-base">Create My Account</button>
+          </div>
+          <p class="mt-6 text-center text-sm text-slate-500">Already have an account? <a onclick="showPage('login')" class="text-blue-600 font-semibold hover:underline cursor-pointer">Sign in</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     DASHBOARD
+══════════════════════════════════════ -->
+<div id="page-dashboard" class="page">
+  <div class="flex min-h-screen" style="background:#F8FAFC">
+    <div class="sidebar"><div class="p-4 border-b border-slate-100"><div class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer" onclick="showPage('profile')"><div class="w-10 h-10 rounded-full gradient-bg flex items-center justify-center text-white font-bold">A</div><div><p class="text-sm font-semibold text-slate-900">Alex Morgan</p><p class="text-xs text-slate-500">@alexmorgan</p></div></div><div class="mt-3 px-2"><div class="flex justify-between text-xs text-slate-500 mb-1.5"><span>8,750 XP</span><span>10,000 XP</span></div><div class="progress-bar"><div class="progress-fill" style="width:87.5%"></div></div></div></div><nav class="p-2 space-y-0.5"><a class="nav-item active" onclick="navTo('dashboard')">🏠 Home</a><a class="nav-item" onclick="navTo('explore')">🧭 Explore</a><a class="nav-item" onclick="navTo('blogs')">📖 Blogs</a><a class="nav-item" onclick="navTo('travel')">✈️ Travel</a><a class="nav-item" onclick="navTo('sports')">⚡ Sports</a><a class="nav-item" onclick="navTo('communities')">👥 Communities</a><a class="nav-item" onclick="navTo('ai')">🧠 AI Planner</a><a class="nav-item" onclick="navTo('bookmarks')">🔖 Bookmarks</a><a class="nav-item" onclick="navTo('leaderboard')">🏆 Leaderboard</a><a class="nav-item" onclick="navTo('analytics')">📊 Analytics</a><a class="nav-item" onclick="navTo('profile')">👤 Profile</a><a class="nav-item" onclick="navTo('settings')">⚙️ Settings</a></nav><div class="p-4 border-t border-slate-100 mt-4"><button onclick="navTo('write')" class="w-full py-2.5 gradient-bg text-white text-sm font-semibold rounded-xl">✏️ Write a Blog</button></div></div>
+    <main class="flex-1 ml-64 pt-16 p-6 lg:p-8 max-w-7xl">
+      <!-- Welcome banner -->
+      <div class="relative gradient-bg rounded-2xl p-6 overflow-hidden mb-8">
+        <div class="absolute top-0 right-0 w-48 h-48 rounded-full -translate-y-1/4 translate-x-1/4" style="background:rgba(255,255,255,0.05)"></div>
+        <div class="relative z-10 flex items-center justify-between"><div><h1 class="text-xl font-black text-white mb-1">Good morning, Alex! 👋</h1><p style="color:rgba(255,255,255,0.7);font-size:0.875rem">Ready for your next adventure? You have 3 new notifications.</p></div><button onclick="navTo('write')" class="hidden md:flex items-center gap-2 px-5 py-2.5 bg-white font-bold rounded-xl hover:shadow-lg transition-all text-sm" style="color:#1d4ed8">✏️ Write Blog</button></div>
+      </div>
+      <!-- Stats -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div class="stat-card"><div class="w-9 h-9 rounded-xl mb-3 flex items-center justify-center text-lg" style="background:#dbeafe">📈</div><div class="text-2xl font-black text-slate-900">24.5K</div><div class="flex items-center justify-between mt-1"><span class="text-xs text-slate-500">Total Views</span><span class="text-xs font-semibold" style="color:#16a34a">+12%</span></div></div>
+        <div class="stat-card"><div class="w-9 h-9 rounded-xl mb-3 flex items-center justify-center text-lg" style="background:#ede9fe">👥</div><div class="text-2xl font-black text-slate-900">12.4K</div><div class="flex items-center justify-between mt-1"><span class="text-xs text-slate-500">Followers</span><span class="text-xs font-semibold" style="color:#16a34a">+8%</span></div></div>
+        <div class="stat-card"><div class="w-9 h-9 rounded-xl mb-3 flex items-center justify-center text-lg" style="background:#cffafe">📖</div><div class="text-2xl font-black text-slate-900">47</div><div class="flex items-center justify-between mt-1"><span class="text-xs text-slate-500">Blog Posts</span><span class="text-xs font-semibold" style="color:#16a34a">+2</span></div></div>
+        <div class="stat-card"><div class="w-9 h-9 rounded-xl mb-3 flex items-center justify-center text-lg" style="background:#dcfce7">📍</div><div class="text-2xl font-black text-slate-900">12</div><div class="flex items-center justify-between mt-1"><span class="text-xs text-slate-500">Destinations</span><span class="text-xs font-semibold" style="color:#16a34a">+1</span></div></div>
+      </div>
+      <!-- Content grid -->
+      <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+        <div class="xl:col-span-2">
+          <div class="flex items-center justify-between mb-5"><h2 class="font-bold text-slate-900 text-lg flex items-center gap-2">🔥 Trending Now</h2><button onclick="navTo('blogs')" class="text-sm text-blue-600 font-medium hover:underline">View all →</button></div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="card overflow-hidden cursor-pointer group" onclick="navTo('blog-detail')"><div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&h=200&fit=crop" alt="" class="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-105"/><div class="absolute top-2 left-2"><span class="badge badge-blue">Travel</span></div></div><div class="p-4"><p class="text-xs text-slate-400 mb-1">🕐 12 min read</p><h3 class="font-bold text-slate-900 text-sm mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">Hidden Gems of Southeast Asia</h3><div class="flex items-center gap-2 mt-3"><div class="w-6 h-6 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-bold">A</div><span class="text-xs text-slate-500">Alex Morgan</span><span class="text-xs text-slate-400 ml-auto">❤️ 1.2K</span></div></div></div>
+            <div class="card overflow-hidden cursor-pointer group" onclick="navTo('blog-detail')"><div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&h=200&fit=crop" alt="" class="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-105"/><div class="absolute top-2 left-2"><span class="badge badge-blue">Sports</span></div></div><div class="p-4"><p class="text-xs text-slate-400 mb-1">🕐 8 min read</p><h3 class="font-bold text-slate-900 text-sm mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">Cricket World Cup 2024 Guide</h3><div class="flex items-center gap-2 mt-3"><div class="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold">P</div><span class="text-xs text-slate-500">Priya Sharma</span><span class="text-xs text-slate-400 ml-auto">❤️ 892</span></div></div></div>
+            <div class="card overflow-hidden cursor-pointer group" onclick="navTo('blog-detail')"><div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=200&fit=crop" alt="" class="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-105"/><div class="absolute top-2 left-2"><span class="badge badge-blue">Travel</span></div></div><div class="p-4"><p class="text-xs text-slate-400 mb-1">🕐 15 min read</p><h3 class="font-bold text-slate-900 text-sm mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">Tokyo to Kyoto Rail Adventure</h3><div class="flex items-center gap-2 mt-3"><div class="w-6 h-6 rounded-full bg-cyan-500 flex items-center justify-center text-white text-xs font-bold">M</div><span class="text-xs text-slate-500">Marcus Johnson</span><span class="text-xs text-slate-400 ml-auto">❤️ 2.1K</span></div></div></div>
+            <div class="card overflow-hidden cursor-pointer group" onclick="navTo('blog-detail')"><div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1508193638397-1c4234db14d8?w=400&h=200&fit=crop" alt="" class="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-105"/><div class="absolute top-2 left-2"><span class="badge badge-amber">Adventure</span></div></div><div class="p-4"><p class="text-xs text-slate-400 mb-1">🕐 18 min read</p><h3 class="font-bold text-slate-900 text-sm mb-1 group-hover:text-blue-600 transition-colors line-clamp-2">Patagonia W Circuit Complete Guide</h3><div class="flex items-center gap-2 mt-3"><div class="w-6 h-6 rounded-full gradient-bg flex items-center justify-center text-white text-xs font-bold">A</div><span class="text-xs text-slate-500">Alex Morgan</span><span class="text-xs text-slate-400 ml-auto">❤️ 1.9K</span></div></div></div>
+          </div>
+        </div>
+        <div class="space-y-5">
+          <div class="card p-5"><h3 class="font-bold text-slate-900 mb-3">🗺️ Hot Destinations</h3><div class="space-y-2"><div class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer" onclick="navTo('travel')"><img src="https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=60&h=60&fit=crop" class="w-12 h-12 rounded-xl object-cover"/><div><p class="text-sm font-semibold text-slate-900">Santorini</p><p class="text-xs text-slate-500">Greece</p><p class="text-xs text-amber-500">⭐ 4.9</p></div></div><div class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer" onclick="navTo('travel')"><img src="https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=60&h=60&fit=crop" class="w-12 h-12 rounded-xl object-cover"/><div><p class="text-sm font-semibold text-slate-900">Kyoto</p><p class="text-xs text-slate-500">Japan</p><p class="text-xs text-amber-500">⭐ 4.8</p></div></div><div class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer" onclick="navTo('travel')"><img src="https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=60&h=60&fit=crop" class="w-12 h-12 rounded-xl object-cover"/><div><p class="text-sm font-semibold text-slate-900">Bali</p><p class="text-xs text-slate-500">Indonesia</p><p class="text-xs text-amber-500">⭐ 4.7</p></div></div></div></div>
+          <div class="card p-5"><h3 class="font-bold text-slate-900 mb-3">⭐ Top Creators</h3><div class="space-y-3"><div class="flex items-center gap-3"><div class="relative"><div class="w-8 h-8 rounded-full overflow-hidden"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop" class="w-full h-full object-cover"/></div><span class="absolute -bottom-0.5 -right-0.5 text-xs">🌟</span></div><div class="flex-1"><p class="text-sm font-semibold text-slate-900">Priya Sharma</p><p class="text-xs text-slate-400">8.9K followers</p></div><span class="badge badge-blue">#1</span></div><div class="flex items-center gap-3"><div class="relative"><div class="w-8 h-8 rounded-full overflow-hidden"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop" class="w-full h-full object-cover"/></div></div><div class="flex-1"><p class="text-sm font-semibold text-slate-900">Marcus Johnson</p><p class="text-xs text-slate-400">5.6K followers</p></div><span class="badge badge-blue">#2</span></div></div></div>
+          <div class="card p-5"><h3 class="font-bold text-slate-900 mb-3">👥 Join Communities</h3><div class="space-y-3"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style="background:#d1fae5">🏏</div><div class="flex-1"><p class="text-sm font-semibold text-slate-900">Cricket Nation</p><p class="text-xs text-slate-500">45.2K members</p></div><button onclick="navTo('communities')" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Join</button></div><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style="background:#fee2e2">⚽</div><div class="flex-1"><p class="text-sm font-semibold text-slate-900">Football United</p><p class="text-xs text-slate-500">89.4K members</p></div><button onclick="navTo('communities')" class="text-xs font-semibold text-blue-600 hover:text-blue-700">Join</button></div></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Placeholder pages for inner navigation -->
+<div id="page-inner" class="page">
+  <div class="flex min-h-screen" style="background:#F8FAFC">
+    <div class="sidebar"><div class="p-4 border-b border-slate-100"><div class="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 cursor-pointer" onclick="navTo('profile')"><div class="w-10 h-10 rounded-full gradient-bg flex items-center justify-center text-white font-bold">A</div><div><p class="text-sm font-semibold text-slate-900">Alex Morgan</p><p class="text-xs text-slate-500">@alexmorgan</p></div></div><div class="mt-3 px-2"><div class="flex justify-between text-xs text-slate-500 mb-1.5"><span>8,750 XP</span><span>10,000 XP</span></div><div class="progress-bar"><div class="progress-fill" style="width:87.5%"></div></div></div></div><nav class="p-2 space-y-0.5"><a class="nav-item" onclick="navTo('dashboard')">🏠 Home</a><a class="nav-item" onclick="navTo('explore')">🧭 Explore</a><a class="nav-item" onclick="navTo('blogs')">📖 Blogs</a><a class="nav-item" onclick="navTo('travel')">✈️ Travel</a><a class="nav-item" onclick="navTo('sports')">⚡ Sports</a><a class="nav-item" onclick="navTo('communities')">👥 Communities</a><a class="nav-item" onclick="navTo('ai')">🧠 AI Planner</a><a class="nav-item" onclick="navTo('bookmarks')">🔖 Bookmarks</a><a class="nav-item" onclick="navTo('leaderboard')">🏆 Leaderboard</a><a class="nav-item" onclick="navTo('analytics')">📊 Analytics</a><a class="nav-item" onclick="navTo('profile')">👤 Profile</a><a class="nav-item" onclick="navTo('settings')">⚙️ Settings</a></nav><div class="p-4 border-t border-slate-100 mt-4"><button onclick="navTo('write')" class="w-full py-2.5 gradient-bg text-white text-sm font-semibold rounded-xl">✏️ Write a Blog</button></div></div>
+    <main class="flex-1 ml-64 pt-16 p-8">
+      <div id="innerContent"></div>
+    </main>
+  </div>
+</div>
+
+<script>
+let isLoggedIn = false;
+let currentInnerPage = '';
+
+const innerPages = {
+  explore: `<div><h1 class="text-2xl font-black text-slate-900 mb-2">🧭 Explore</h1><p class="text-slate-500 mb-8">Discover trending content from around the world</p><div class="relative max-w-lg mb-8"><input type="text" placeholder="Search blogs, destinations, creators..." class="w-full px-5 py-4 border border-slate-200 rounded-xl text-base outline-none focus:ring-2 focus:ring-blue-500 pl-12"/><span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">🔍</span></div><h2 class="text-xl font-bold text-slate-900 mb-5">🔥 Trending Blogs</h2><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">${blogCards()}</div></div>`,
+  blogs: `<div><h1 class="text-2xl font-black text-slate-900 mb-2">📖 Blogs</h1><p class="text-slate-500 mb-6">Discover stories from explorers worldwide</p><div class="flex gap-2 mb-6 overflow-x-auto pb-1"><button class="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white">All</button><button class="px-4 py-2 rounded-xl text-sm font-semibold bg-white border border-slate-200 text-slate-600">Travel</button><button class="px-4 py-2 rounded-xl text-sm font-semibold bg-white border border-slate-200 text-slate-600">Sports</button><button class="px-4 py-2 rounded-xl text-sm font-semibold bg-white border border-slate-200 text-slate-600">Adventure</button></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">${blogCards()}</div></div>`,
+  travel: `<div><h1 class="text-2xl font-black text-slate-900 mb-2">✈️ Explore Destinations</h1><p class="text-slate-500 mb-6">Discover amazing places to visit around the world</p><div class="relative rounded-2xl overflow-hidden h-56 mb-8"><img src="https://images.unsplash.com/photo-1488085061387-422e29b40080?w=1200&h=400&fit=crop" alt="" class="w-full h-full object-cover"/><div class="absolute inset-0" style="background:linear-gradient(to right,rgba(0,0,0,0.7),transparent)"></div><div class="absolute inset-0 flex items-center px-8"><div><span class="badge badge-blue mb-3 inline-block">✈️ Featured</span><h2 class="text-3xl font-black text-white mb-2">Discover Southeast Asia</h2><p class="text-white/80 mb-4">Ancient temples, vibrant markets, pristine beaches</p></div></div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">${destCards()}</div></div>`,
+  sports: `<div><h1 class="text-2xl font-black text-slate-900 mb-2">⚡ Sports Hub</h1><p class="text-slate-500 mb-6">Live scores, communities, and match discussions</p><h2 class="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2"><div class="live-dot"></div> Live Scores</h2><div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8"><div class="card p-5"><div class="flex items-center justify-between mb-4"><span class="text-2xl">🏏</span><span class="badge badge-red">LIVE</span></div><div class="flex items-center justify-between"><div class="text-center flex-1"><p class="font-bold">India</p><p class="text-2xl font-black text-blue-600">287/4</p></div><div class="px-4 text-center"><p class="text-xs text-slate-400">vs</p><p class="text-xs text-slate-500">43.2/50</p></div><div class="text-center flex-1"><p class="font-bold">Australia</p><p class="text-2xl font-black" style="color:#7c3aed">245/8</p></div></div></div><div class="card p-5"><div class="flex items-center justify-between mb-4"><span class="text-2xl">⚽</span><span class="badge badge-red">LIVE</span></div><div class="flex items-center justify-between"><div class="text-center flex-1"><p class="font-bold">Man City</p><p class="text-2xl font-black text-blue-600">2</p></div><div class="px-4 text-center"><p class="text-xs text-slate-400">vs</p><p class="text-xs text-slate-500">72'</p></div><div class="text-center flex-1"><p class="font-bold">Arsenal</p><p class="text-2xl font-black" style="color:#7c3aed">1</p></div></div></div><div class="card p-5"><div class="flex items-center justify-between mb-4"><span class="text-2xl">🏀</span><span class="badge badge-blue">Q4</span></div><div class="flex items-center justify-between"><div class="text-center flex-1"><p class="font-bold">Lakers</p><p class="text-2xl font-black text-blue-600">98</p></div><div class="px-4 text-center"><p class="text-xs text-slate-400">vs</p><p class="text-xs text-slate-500">3:42</p></div><div class="text-center flex-1"><p class="font-bold">Warriors</p><p class="text-2xl font-black" style="color:#7c3aed">102</p></div></div></div></div><h2 class="text-lg font-bold text-slate-900 mb-4">Sports Communities</h2><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">${communityCards()}</div></div>`,
+  communities: `<div><div class="flex items-center justify-between mb-8"><div><h1 class="text-2xl font-black text-slate-900 mb-1">👥 Communities</h1><p class="text-slate-500">Join passionate sports and travel communities</p></div><button class="btn-primary">+ Create Community</button></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">${communityCards()}</div></div>`,
+  ai: `<div class="max-w-3xl mx-auto"><h1 class="text-2xl font-black text-slate-900 mb-2 flex items-center gap-2">🧠 AI Travel Planner</h1><p class="text-slate-500 mb-8">Get a personalized itinerary powered by artificial intelligence</p><div class="card p-6 mb-6"><h2 class="font-bold text-slate-900 mb-5 flex items-center gap-2">✨ Plan Your Trip</h2><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"><div><label class="block text-sm font-medium text-slate-700 mb-1.5">Destination</label><input id="aiDest" type="text" placeholder="e.g. Bali, Paris, Tokyo..." class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div><div><label class="block text-sm font-medium text-slate-700 mb-1.5">Number of Days</label><select class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"><option>7 days</option><option>3 days</option><option>5 days</option><option>10 days</option><option>14 days</option></select></div><div><label class="block text-sm font-medium text-slate-700 mb-1.5">Total Budget (USD)</label><input type="number" placeholder="e.g. 1500" value="1200" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div><div><label class="block text-sm font-medium text-slate-700 mb-1.5">Travel Style</label><select class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"><option>Balanced Explorer</option><option>Budget Backpacker</option><option>Comfort Traveler</option><option>Luxury Seeker</option></select></div></div><button onclick="generateAI()" id="aiBtn" class="btn-primary w-full justify-center py-3.5 text-base">✨ Generate AI Itinerary</button></div><div id="aiResult"></div></div>`,
+  bookmarks: `<div><h1 class="text-2xl font-black text-slate-900 mb-2 flex items-center gap-2">🔖 Bookmarks</h1><p class="text-slate-500 mb-6">Your saved content in one place</p><div class="flex gap-2 mb-6"><button class="px-4 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white">Blogs (2)</button><button class="px-4 py-2 rounded-xl text-sm font-semibold bg-white border border-slate-200 text-slate-600">Destinations (2)</button><button class="px-4 py-2 rounded-xl text-sm font-semibold bg-white border border-slate-200 text-slate-600">Communities (1)</button></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"><div class="card overflow-hidden cursor-pointer group"><div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&h=200&fit=crop" alt="" class="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"/><div class="absolute top-2 left-2"><span class="badge badge-blue">Sports</span></div><button class="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center text-amber-500 shadow-md">🔖</button></div><div class="p-4"><h3 class="font-bold text-slate-900 text-sm mb-2">Cricket World Cup 2024 Guide</h3><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold">P</div><span class="text-xs text-slate-500">Priya Sharma</span><span class="text-xs text-slate-400 ml-auto">❤️ 892</span></div></div></div><div class="card overflow-hidden cursor-pointer group"><div class="relative overflow-hidden"><img src="https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=200&fit=crop" alt="" class="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-500"/><div class="absolute top-2 left-2"><span class="badge badge-blue">Food & Travel</span></div><button class="absolute top-2 right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center text-amber-500 shadow-md">🔖</button></div><div class="p-4"><h3 class="font-bold text-slate-900 text-sm mb-2">Street Food Safari: Bangkok</h3><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full bg-purple-500 flex items-center justify-center text-white text-xs font-bold">P</div><span class="text-xs text-slate-500">Priya Sharma</span><span class="text-xs text-slate-400 ml-auto">❤️ 3.4K</span></div></div></div></div></div>`,
+  leaderboard: `<div><h1 class="text-2xl font-black text-slate-900 mb-2 flex items-center gap-2">🏆 Leaderboard</h1><p class="text-slate-500 mb-8">Top creators ranked by XP and engagement</p><div class="grid grid-cols-3 gap-4 items-end mb-8"><div class="card p-5 text-center"><span class="text-3xl mb-2 block">🥈</span><div class="w-16 h-16 rounded-full overflow-hidden mx-auto mb-3 ring-4 ring-white shadow-lg"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop" class="w-full h-full object-cover"/></div><p class="font-bold text-slate-900 text-sm">Priya Sharma</p><p class="text-xs text-slate-400">@priyasharma</p><div class="mt-3 badge badge-blue mx-auto">5,200 XP</div></div><div class="card p-5 text-center ring-2" style="ring-color:#f59e0b;box-shadow:0 0 0 2px #f59e0b"><span class="text-3xl mb-2 block">🥇</span><div class="w-20 h-20 rounded-full overflow-hidden mx-auto mb-3 ring-4 ring-white shadow-xl"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop" class="w-full h-full object-cover"/></div><p class="font-bold text-slate-900">Alex Morgan</p><p class="text-xs text-slate-400">@alexmorgan</p><div class="mt-3 px-3 py-1 rounded-full text-xs font-bold inline-block" style="background:#fef3c7;color:#92400e">8,750 XP</div></div><div class="card p-5 text-center"><span class="text-3xl mb-2 block">🥉</span><div class="w-16 h-16 rounded-full overflow-hidden mx-auto mb-3 ring-4 ring-white shadow-lg"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop" class="w-full h-full object-cover"/></div><p class="font-bold text-slate-900 text-sm">Marcus Johnson</p><p class="text-xs text-slate-400">@marcusjohnson</p><div class="mt-3 badge badge-blue mx-auto">3,800 XP</div></div></div><div class="card overflow-hidden"><table class="w-full"><thead class="bg-slate-50"><tr><th class="text-left text-xs font-semibold text-slate-500 p-4">Rank</th><th class="text-left text-xs font-semibold text-slate-500 p-4">Creator</th><th class="text-left text-xs font-semibold text-slate-500 p-4">XP</th><th class="text-left text-xs font-semibold text-slate-500 p-4">Blogs</th><th class="text-left text-xs font-semibold text-slate-500 p-4">Followers</th></tr></thead><tbody class="divide-y divide-slate-50"><tr class="hover:bg-slate-50"><td class="p-4 text-xl font-black text-slate-400">#1</td><td class="p-4"><div class="flex items-center gap-3"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop" class="w-8 h-8 rounded-full object-cover"/><div><p class="font-semibold text-slate-900 text-sm">Alex Morgan</p><p class="text-xs text-slate-400">@alexmorgan</p></div></div></td><td class="p-4 font-bold text-blue-600">8,750</td><td class="p-4 text-slate-600">47</td><td class="p-4 text-slate-600">12.4K</td></tr><tr class="hover:bg-slate-50"><td class="p-4 text-xl font-black text-slate-400">#2</td><td class="p-4"><div class="flex items-center gap-3"><img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=40&h=40&fit=crop" class="w-8 h-8 rounded-full object-cover"/><div><p class="font-semibold text-slate-900 text-sm">Priya Sharma</p><p class="text-xs text-slate-400">@priyasharma</p></div></div></td><td class="p-4 font-bold text-blue-600">5,200</td><td class="p-4 text-slate-600">32</td><td class="p-4 text-slate-600">8.9K</td></tr><tr class="hover:bg-slate-50"><td class="p-4 text-xl font-black text-slate-400">#3</td><td class="p-4"><div class="flex items-center gap-3"><img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop" class="w-8 h-8 rounded-full object-cover"/><div><p class="font-semibold text-slate-900 text-sm">Marcus Johnson</p><p class="text-xs text-slate-400">@marcusjohnson</p></div></div></td><td class="p-4 font-bold text-blue-600">3,800</td><td class="p-4 text-slate-600">21</td><td class="p-4 text-slate-600">5.6K</td></tr></tbody></table></div></div>`,
+  analytics: `<div><h1 class="text-2xl font-black text-slate-900 mb-2 flex items-center gap-2">📊 Creator Analytics</h1><p class="text-slate-500 mb-8">Track your content performance and audience growth</p><div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8"><div class="stat-card"><div class="w-9 h-9 rounded-xl mb-3 flex items-center justify-center" style="background:#dbeafe">👁️</div><div class="text-2xl font-black text-slate-900">24.5K</div><div class="flex items-center justify-between mt-1"><span class="text-xs text-slate-500">Total Views</span><span class="text-xs font-semibold text-green-600">+18%</span></div></div><div class="stat-card"><div class="w-9 h-9 rounded-xl mb-3 flex items-center justify-center" style="background:#fee2e2">❤️</div><div class="text-2xl font-black text-slate-900">1,484</div><div class="flex items-center justify-between mt-1"><span class="text-xs text-slate-500">Total Likes</span><span class="text-xs font-semibold text-green-600">+24%</span></div></div><div class="stat-card"><div class="w-9 h-9 rounded-xl mb-3 flex items-center justify-center" style="background:#ede9fe">👥</div><div class="text-2xl font-black text-slate-900">12.4K</div><div class="flex items-center justify-between mt-1"><span class="text-xs text-slate-500">Followers</span><span class="text-xs font-semibold text-green-600">+8%</span></div></div><div class="stat-card"><div class="w-9 h-9 rounded-xl mb-3 flex items-center justify-center" style="background:#dcfce7">📈</div><div class="text-2xl font-black text-slate-900">8.2m</div><div class="flex items-center justify-between mt-1"><span class="text-xs text-slate-500">Avg Read Time</span><span class="text-xs font-semibold text-green-600">+2%</span></div></div></div><div class="card p-6 mb-6"><h2 class="font-bold text-slate-900 mb-4">Views Over Time</h2><div class="flex items-end gap-2 h-40">${[1200,2100,1800,3200,4100,5800].map((v,i) => `<div class="flex-1 flex flex-col items-center gap-1"><div class="w-full rounded-t-lg gradient-bg" style="height:${Math.round(v/58)}px;opacity:${0.5+i*0.1}" title="${v} views"></div><span class="text-xs text-slate-400">${['Aug','Sep','Oct','Nov','Dec','Jan'][i]}</span></div>`).join('')}</div></div><div class="card p-6"><h2 class="font-bold text-slate-900 mb-6">Top Performing Blogs</h2><div class="space-y-3">${[['Hidden Gems of Southeast Asia','15.6K','1.2K','89','12m'],['Cricket World Cup Guide','22.4K','892','156','8m'],['Tokyo to Kyoto Rail Adventure','34.8K','2.1K','234','15m']].map(([title,views,likes,comments,time]) => `<div class="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors"><div class="flex-1"><p class="text-sm font-medium text-slate-900 line-clamp-1">${title}</p></div><span class="text-xs text-slate-500">👁 ${views}</span><span class="text-xs text-slate-500">❤️ ${likes}</span><span class="text-xs text-slate-500">💬 ${comments}</span><span class="text-xs text-slate-400">${time}</span></div>`).join('')}</div></div></div>`,
+  profile: `<div><div class="relative rounded-2xl overflow-hidden h-44 mb-0"><img src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&h=300&fit=crop" alt="" class="w-full h-full object-cover"/></div><div class="card -mt-8 p-6 mb-6"><div class="flex flex-col md:flex-row gap-4 items-start md:items-end"><div class="w-24 h-24 rounded-full overflow-hidden ring-4 ring-white shadow-xl -mt-16"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop" class="w-full h-full object-cover"/></div><div class="flex-1"><div class="flex items-center gap-2 mb-1"><h1 class="text-2xl font-black text-slate-900">Alex Morgan</h1><span title="Top Creator">⭐</span><span title="Explorer">🗺️</span></div><p class="text-slate-500">@alexmorgan · San Francisco, CA</p><p class="text-slate-700 text-sm mt-2 max-w-lg">Adventure seeker | Travel blogger | Sports enthusiast. Exploring the world one destination at a time. 🌍</p></div><div class="flex gap-3"><button class="btn-secondary">Message</button><button class="btn-primary">Follow</button></div></div><div class="flex gap-8 mt-6 pt-6 border-t border-slate-100"><div class="text-center"><div class="text-xl font-black text-slate-900">12.4K</div><div class="text-xs text-slate-500">Followers</div></div><div class="text-center"><div class="text-xl font-black text-slate-900">892</div><div class="text-xs text-slate-500">Following</div></div><div class="text-center"><div class="text-xl font-black text-slate-900">47</div><div class="text-xs text-slate-500">Blogs</div></div><div class="text-center"><div class="text-xl font-black text-slate-900">8.7K</div><div class="text-xs text-slate-500">XP</div></div></div></div><div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">${blogCards()}</div></div>`,
+  write: `<div class="max-w-4xl mx-auto"><div class="flex items-center justify-between mb-6"><h1 class="text-2xl font-black text-slate-900 flex items-center gap-2">✏️ Write a Blog</h1><div class="flex gap-2"><button onclick="alert('Draft saved!')" class="btn-secondary text-sm">💾 Save Draft</button><button onclick="alert('Published!')" class="btn-primary text-sm">🌐 Publish</button></div></div><div class="card p-6 mb-6"><input type="text" placeholder="Your compelling blog title..." class="w-full text-3xl font-black text-slate-900 placeholder-slate-300 border-none outline-none bg-transparent mb-4"/><hr class="border-slate-100 mb-4"/><div class="flex gap-1 p-2 bg-slate-50 rounded-xl mb-4"><button class="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white" title="Bold"><strong>B</strong></button><button class="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white" title="Italic"><em>I</em></button><button class="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white" title="List">≡</button><button class="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white" title="Image">🖼</button><button class="p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-white" title="Link">🔗</button></div><textarea rows="18" placeholder="Tell your story... Start with an engaging introduction, share your experiences, add tips and takeaways." class="w-full text-slate-700 placeholder-slate-300 border-none outline-none bg-transparent resize-none leading-relaxed text-base"></textarea></div><div class="card p-6"><h3 class="font-bold text-slate-900 mb-4">Blog Settings</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><label class="block text-sm font-medium text-slate-700 mb-1.5">Category</label><select class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"><option>Travel</option><option>Sports</option><option>Adventure</option><option>Food & Travel</option></select></div><div><label class="block text-sm font-medium text-slate-700 mb-1.5">Tags</label><input type="text" placeholder="e.g. Asia, Backpacking, Budget" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div></div><div class="mt-4"><label class="block text-sm font-medium text-slate-700 mb-1.5">Cover Image URL</label><input type="text" placeholder="https://images.unsplash.com/..." class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div></div></div>`,
+  settings: `<div class="max-w-3xl mx-auto"><h1 class="text-2xl font-black text-slate-900 mb-8">⚙️ Settings</h1><div class="card p-6 mb-6"><h2 class="font-bold text-slate-900 text-lg mb-5">Profile Information</h2><div class="flex items-center gap-4 mb-5"><div class="w-16 h-16 rounded-full overflow-hidden"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop" class="w-full h-full object-cover"/></div><button class="btn-secondary text-sm">Change Photo</button></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><div><label class="block text-sm font-medium text-slate-700 mb-1.5">Full Name</label><input type="text" value="Alex Morgan" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div><div><label class="block text-sm font-medium text-slate-700 mb-1.5">Username</label><input type="text" value="alexmorgan" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div><div><label class="block text-sm font-medium text-slate-700 mb-1.5">Email</label><input type="email" value="alex@example.com" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div><div><label class="block text-sm font-medium text-slate-700 mb-1.5">Location</label><input type="text" value="San Francisco, CA" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500"/></div></div><div class="mb-4"><label class="block text-sm font-medium text-slate-700 mb-1.5">Bio</label><textarea rows="3" class="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500 resize-none">Adventure seeker | Travel blogger | Sports enthusiast. Exploring the world one destination at a time. 🌍</textarea></div><div class="flex justify-end"><button onclick="alert('Changes saved!')" class="btn-primary">Save Changes</button></div></div><div class="card p-6"><h2 class="font-bold text-slate-900 text-lg mb-5">Notification Preferences</h2><div class="space-y-4">${[['Someone likes your blog','Get notified when your content is liked'],['New comment on your blog','Get notified about new comments'],['New follower','When someone follows you'],['Community updates','Updates from your communities'],['Weekly digest','Weekly performance summary']].map(([label,desc],i) => `<div class="flex items-center justify-between py-3 border-b border-slate-100 last:border-0"><div><p class="text-sm font-medium text-slate-900">${label}</p><p class="text-xs text-slate-500">${desc}</p></div><div class="relative w-11 h-6 rounded-full cursor-pointer" style="background:${i<3?'#2563eb':'#e2e8f0'}" onclick="this.style.background=this.style.background==='#2563eb'?'#e2e8f0':'#2563eb';"><span class="absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-all" style="${i<3?'right:0.125rem':'left:0.125rem'}"></span></div></div>`).join('')}</div></div></div>`,
+  'blog-detail': `<div class="max-w-4xl mx-auto"><button onclick="navTo('blogs')" class="flex items-center gap-2 text-slate-500 hover:text-slate-900 mb-6 transition-colors">← Back to Blogs</button><div class="mb-6"><div class="flex gap-2 mb-4"><span class="badge badge-blue">Travel</span><span class="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-semibold">✨ Featured</span></div><h1 class="text-3xl md:text-4xl font-black text-slate-900 leading-tight mb-4">Hidden Gems of Southeast Asia: A Complete 30-Day Itinerary</h1><div class="flex items-center gap-4 pb-6 border-b border-slate-100"><div class="flex items-center gap-3"><div class="w-10 h-10 rounded-full overflow-hidden"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop" class="w-full h-full object-cover"/></div><div><p class="font-semibold text-slate-900 text-sm">Alex Morgan</p><p class="text-xs text-slate-400">@alexmorgan</p></div></div><div class="flex gap-4 text-sm text-slate-500 ml-auto"><span>🕐 12 min read</span><span>👁 15.6K views</span><span>Jan 15, 2024</span></div></div></div><img src="https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=800&h=450&fit=crop" alt="" class="w-full h-72 md:h-96 object-cover rounded-2xl mb-8 shadow-lg"/><div class="space-y-4 text-slate-700 leading-relaxed text-base mb-10"><h2 class="text-2xl font-black text-slate-900 mt-6 mb-3">Vietnam's Northern Highlands</h2><p>Southeast Asia has long captivated travelers with its stunning landscapes, rich cultures, and incredible cuisine. But beyond the well-trodden tourist paths lies a world of hidden treasures waiting to be discovered.</p><p>Most travelers stick to Hanoi and Ha Long Bay, but the northern highlands offer breathtaking rice terraces, colorful hill tribes, and some of the most dramatic scenery in Asia. The town of Sapa, perched at 1,500 meters above sea level, serves as the perfect base for exploring the Hoang Lien Son mountain range.</p><h2 class="text-2xl font-black text-slate-900 mt-6 mb-3">Cambodia Beyond Angkor</h2><p>While Angkor Wat rightfully draws millions of visitors, Cambodia has so much more to offer. The coastal town of Kep, famous for its crab market, offers a glimpse into pre-war Cambodian elegance through its crumbling Art Deco villas.</p><p>Whether you're a seasoned backpacker or planning your first international trip, Southeast Asia offers something magical for every kind of traveler. Take local buses, eat where the locals eat, and don't be afraid to get lost — that's often when the best discoveries happen.</p></div><div class="glass rounded-2xl px-6 py-3 flex items-center justify-between mb-8"><div class="flex items-center gap-2"><button onclick="this.innerHTML='❤️ 1,248';this.style.color='#ef4444'" class="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-red-50">🤍 1,247</button><button class="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-blue-50">💬 89</button><button onclick="this.innerHTML='🔖';this.style.color='#f59e0b'" class="p-2 rounded-xl text-slate-400 hover:text-amber-500">🔖</button></div><div class="flex items-center gap-2"><span class="text-xs text-slate-400">Share:</span><button class="p-2 rounded-xl text-sky-500 hover:bg-sky-50">𝕏</button><button class="p-2 rounded-xl text-slate-400 hover:bg-slate-100">🔗</button></div></div><div class="card p-6 mb-8 flex gap-4"><div class="w-16 h-16 rounded-full overflow-hidden flex-shrink-0"><img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80&h=80&fit=crop" class="w-full h-full object-cover"/></div><div class="flex-1"><div class="flex items-center justify-between mb-2"><div><h3 class="font-bold text-slate-900">Alex Morgan</h3><p class="text-sm text-slate-500">@alexmorgan · 12.4K followers</p></div><button class="btn-primary text-sm px-4 py-2">Follow</button></div><p class="text-slate-600 text-sm">Adventure seeker | Travel blogger | Sports enthusiast. Exploring the world one destination at a time. 🌍</p></div></div><h2 class="text-xl font-bold text-slate-900 mb-4">Comments (2)</h2><div class="space-y-4"><div class="flex gap-3"><div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0"><img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop" class="w-full h-full object-cover"/></div><div class="flex-1"><div class="card p-4"><p class="font-semibold text-slate-900 text-sm mb-1">Sarah Chen <span class="text-slate-400 text-xs font-normal">· 2 hours ago</span></p><p class="text-slate-700 text-sm">Absolutely stunning photography and storytelling! Adding this to my bucket list immediately! 🌟</p></div><div class="flex gap-3 mt-1.5 px-1"><button class="text-xs text-slate-400 hover:text-red-500">❤️ 24</button><button class="text-xs text-slate-400 hover:text-blue-500">Reply</button></div></div></div></div></div>`,
+};
+
+function blogCards() {
+  return [
+    {title:'Hidden Gems of Southeast Asia',img:'https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=400&h=200&fit=crop',cat:'Travel',author:'Alex Morgan',initials:'A',color:'gradient-bg',likes:'1.2K',time:'12 min'},
+    {title:'Cricket World Cup 2024 Guide',img:'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&h=200&fit=crop',cat:'Sports',author:'Priya Sharma',initials:'P',color:'bg-purple-500',likes:'892',time:'8 min'},
+    {title:'Tokyo to Kyoto Rail Adventure',img:'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=200&fit=crop',cat:'Travel',author:'Marcus Johnson',initials:'M',color:'bg-cyan-500',likes:'2.1K',time:'15 min'},
+    {title:'NBA Road Trip: 30 Arenas',img:'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=200&fit=crop',cat:'Sports',author:'Marcus Johnson',initials:'M',color:'bg-cyan-500',likes:'567',time:'10 min'},
+    {title:'Patagonia W Circuit Guide',img:'https://images.unsplash.com/photo-1508193638397-1c4234db14d8?w=400&h=200&fit=crop',cat:'Adventure',author:'Alex Morgan',initials:'A',color:'gradient-bg',likes:'1.9K',time:'18 min'},
+    {title:'Street Food Safari: Bangkok',img:'https://images.unsplash.com/photo-1552465011-b4e21bf6e79a?w=400&h=200&fit=crop',cat:'Food & Travel',author:'Priya Sharma',initials:'P',color:'bg-purple-500',likes:'3.4K',time:'9 min'},
+  ].map(b => `<div class="card overflow-hidden cursor-pointer group" onclick="navTo('blog-detail')"><div class="relative overflow-hidden"><img src="${b.img}" alt="" class="w-full h-40 object-cover transition-transform duration-500 group-hover:scale-105"/><div class="absolute top-2 left-2"><span class="badge badge-blue">${b.cat}</span></div></div><div class="p-4"><p class="text-xs text-slate-400 mb-1">🕐 ${b.time} read</p><h3 class="font-bold text-slate-900 text-sm mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">${b.title}</h3><div class="flex items-center justify-between mt-3"><div class="flex items-center gap-2"><div class="w-6 h-6 rounded-full ${b.color} flex items-center justify-center text-white text-xs font-bold">${b.initials}</div><span class="text-xs text-slate-500">${b.author}</span></div><span class="text-xs text-slate-400">❤️ ${b.likes}</span></div></div></div>`).join('');
+}
+
+function destCards() {
+  return [
+    {name:'Santorini',country:'Greece',img:'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?w=600&h=400&fit=crop',rating:'4.9',budget:'💎 Luxury',reviews:'8,420'},
+    {name:'Kyoto',country:'Japan',img:'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=600&h=400&fit=crop',rating:'4.8',budget:'💵 Mid-Range',reviews:'12,100'},
+    {name:'Bali',country:'Indonesia',img:'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=600&h=400&fit=crop',rating:'4.7',budget:'💚 Budget',reviews:'15,600'},
+    {name:'Maldives',country:'Maldives',img:'https://images.unsplash.com/photo-1573843981267-be1999ff37cd?w=600&h=400&fit=crop',rating:'4.8',budget:'💎 Luxury',reviews:'6,700'},
+    {name:'Machu Picchu',country:'Peru',img:'https://images.unsplash.com/photo-1526392060635-9d6019884377?w=600&h=400&fit=crop',rating:'4.9',budget:'💵 Mid-Range',reviews:'9,800'},
+    {name:'Patagonia',country:'Argentina/Chile',img:'https://images.unsplash.com/photo-1508193638397-1c4234db14d8?w=600&h=400&fit=crop',rating:'4.7',budget:'💵 Mid-Range',reviews:'4,300'},
+  ].map(d => `<div class="card overflow-hidden cursor-pointer group"><div class="relative overflow-hidden h-52"><img src="${d.img}" alt="${d.name}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"/><div class="absolute inset-0" style="background:linear-gradient(to top,rgba(0,0,0,0.65),transparent)"></div><div class="absolute bottom-0 left-0 right-0 p-4"><h3 class="text-white font-black text-lg">${d.name}</h3><p class="text-white/80 text-sm">📍 ${d.country}</p></div><div class="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-lg text-white text-sm font-bold" style="background:rgba(0,0,0,0.3);backdrop-filter:blur(4px)">⭐ ${d.rating}</div></div><div class="p-4"><div class="flex items-center justify-between text-xs mt-1"><span class="font-medium text-slate-600">${d.budget}</span><span class="text-slate-400">${d.reviews} reviews</span></div></div></div>`).join('');
+}
+
+function communityCards() {
+  return [
+    {name:'Cricket Nation',sport:'Cricket',icon:'🏏',members:'45.2K',posts:'8.9K',img:'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=400&h=120&fit=crop',color:'#d1fae5',joined:true},
+    {name:'Football United',sport:'Football',icon:'⚽',members:'89.4K',posts:'23.1K',img:'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=400&h=120&fit=crop',color:'#fee2e2',joined:false},
+    {name:'Hoop Dreams',sport:'Basketball',icon:'🏀',members:'32.1K',posts:'12.4K',img:'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400&h=120&fit=crop',color:'#fef3c7',joined:false},
+    {name:'Shuttle Masters',sport:'Badminton',icon:'🏸',members:'18.7K',posts:'4.5K',img:'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?w=400&h=120&fit=crop',color:'#ede9fe',joined:true},
+    {name:'Spike League',sport:'Volleyball',icon:'🏐',members:'12.3K',posts:'2.9K',img:'https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=400&h=120&fit=crop',color:'#dbeafe',joined:false},
+  ].map(c => `<div class="card overflow-hidden group"><div class="h-20 overflow-hidden"><img src="${c.img}" alt="" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"/></div><div class="p-5 -mt-5 relative"><div class="flex items-end justify-between mb-3"><div class="w-12 h-12 rounded-2xl bg-white shadow-md flex items-center justify-center text-2xl border-2 border-white">${c.icon}</div><button onclick="this.textContent=this.textContent==='✓ Joined'?'+ Join':'✓ Joined';this.className=this.className.includes('bg-blue')?'px-3 py-1 text-xs font-bold rounded-lg border border-slate-200 text-slate-600':'px-3 py-1 bg-blue-600 text-white text-xs font-bold rounded-lg'" class="px-3 py-1 ${c.joined?'border border-slate-200 text-slate-600':'bg-blue-600 text-white'} text-xs font-bold rounded-lg">${c.joined?'✓ Joined':'+ Join'}</button></div><h3 class="font-bold text-slate-900">${c.name}</h3><p class="text-xs text-slate-500 mb-3">${c.sport} community · Discuss, share, and connect</p><div class="flex gap-4 text-xs text-slate-500"><span>👥 <strong class="text-slate-700">${c.members}</strong></span><span>💬 <strong class="text-slate-700">${c.posts}</strong></span></div></div></div>`).join('');
+}
+
+function showPage(pageName) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const sidebar = document.getElementById('sidebar');
+  const navAuth = document.getElementById('navAuth');
+  const navUser = document.getElementById('navUser');
+  const authPages = ['landing','login','signup'];
+  if (authPages.includes(pageName)) {
+    sidebar.classList.add('hidden');
+    navAuth.classList.remove('hidden');
+    navUser.classList.add('hidden');
+    const page = document.getElementById('page-' + pageName);
+    if (page) page.classList.add('active');
+  } else if (isLoggedIn) {
+    navAuth.classList.add('hidden');
+    navUser.classList.remove('hidden');
+    if (['dashboard'].includes(pageName)) {
+      sidebar.classList.remove('hidden');
+      document.getElementById('page-dashboard').classList.add('active');
+    } else {
+      sidebar.classList.remove('hidden');
+      const innerPage = document.getElementById('page-inner');
+      innerPage.classList.add('active');
+      const content = innerPages[pageName] || `<div class="text-center py-16"><div class="text-5xl mb-4">🚧</div><h2 class="text-xl font-bold text-slate-700">Page Under Development</h2><p class="text-slate-400 mt-2">Check back soon!</p></div>`;
+      document.getElementById('innerContent').innerHTML = content;
+      document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+      currentInnerPage = pageName;
+    }
+  } else {
+    showPage('login');
+  }
+}
+
+function navTo(page) {
+  showPage(page);
+}
+
+function doLogin() {
+  isLoggedIn = true;
+  showPage('dashboard');
+}
+
+function doSignup() {
+  showPage('signup');
+}
+
+function generateAI() {
+  const dest = document.getElementById('aiDest')?.value || 'Bali, Indonesia';
+  const btn = document.getElementById('aiBtn');
+  if (!dest) { alert('Please enter a destination!'); return; }
+  if (btn) { btn.innerHTML = '⏳ Generating your perfect itinerary...'; btn.disabled = true; }
+  setTimeout(() => {
+    const result = document.getElementById('aiResult');
+    if (result) {
+      result.innerHTML = `<div class="space-y-4 mt-4"><div class="card p-5 border-l-4 border-blue-500"><div class="flex items-center justify-between mb-2"><h2 class="text-lg font-black text-slate-900">${dest} Itinerary</h2><span class="badge badge-green">✓ Generated</span></div><div class="flex gap-6 text-sm text-slate-600"><span><strong>7</strong> days</span><span>Budget: <strong class="text-blue-600">$1,200</strong></span><span>~$171/day</span></div></div>${[{day:1,theme:'Arrival & Orientation',acts:['Arrive & check-in at resort','Explore local area','Sunset dinner by the beach'],cost:180},{day:2,theme:'Cultural Exploration',acts:['Visit famous rice terraces','Ancient temple tour','Traditional cooking class'],cost:65},{day:3,theme:'Nature & Adventure',acts:['Sunrise volcano hike','Natural hot springs','Beachside dinner'],cost:90},{day:4,theme:'Hidden Gems',acts:['Off-the-beaten-path waterfall','Local village visit','Night market street food'],cost:55},{day:5,theme:'Relaxation',acts:['Beach day','Traditional spa & massage','Rooftop cocktails'],cost:120},{day:6,theme:'Water Adventures',acts:['Snorkeling & diving','Boat trip to islands','Seafood feast'],cost:145},{day:7,theme:'Departure',acts:['Morning yoga session','Souvenir shopping','Airport transfer'],cost:60}].map(d => `<div class="card p-5"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-3"><div class="w-10 h-10 gradient-bg text-white rounded-xl flex items-center justify-center font-black">${d.day}</div><div><p class="font-bold text-slate-900">Day ${d.day}</p><p class="text-xs text-slate-500">${d.theme}</p></div></div><span class="text-sm font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full">~$${d.cost}</span></div><div class="space-y-1">${d.acts.map(a => `<div class="flex gap-2 text-sm text-slate-700"><span class="text-blue-400">•</span>${a}</div>`).join('')}</div></div>`).join('')}<div class="card p-5" style="background:linear-gradient(to right,#eff6ff,#f5f3ff)"><h3 class="font-bold text-slate-900 mb-3">💡 AI Travel Tips</h3><div class="space-y-2 text-sm text-slate-700"><p>→ Book accommodation 2-3 weeks in advance for better rates.</p><p>→ Download offline maps before your trip.</p><p>→ Exchange some local currency at the airport.</p><p>→ Travel insurance is highly recommended.</p></div></div><div class="flex gap-3"><button onclick="alert('Itinerary saved to bookmarks!')" class="btn-primary flex-1 justify-center">💾 Save Itinerary</button><button onclick="alert('Link copied!')" class="btn-secondary">📤 Share</button></div></div>`;
+    }
+    if (btn) { btn.innerHTML = '✨ Generate New Itinerary'; btn.disabled = false; }
+  }, 2000);
+}
+</script>
+</body>
+</html>
